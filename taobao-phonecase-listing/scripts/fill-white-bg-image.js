@@ -150,13 +150,17 @@ async function settleSelection(page) {
 async function main() {
   const dir = getArg('dir');
   if (!dir) {
-    console.error('用法: node fill-white-bg-image.js --dir <产品图片目录> [--from-sku]');
+    console.error('用法: node fill-white-bg-image.js --dir <产品图片目录> [--generate]');
     process.exit(1);
   }
 
-  // 【2026-09-22 起】默认用页面自带的「从主图生成」——一次点击就生成白底图，
-  // 不用开素材中心、不用选图（原来那步要 5–6 秒）。想改回"放 SKU_1 那张图"加 --from-sku。
-  const useGenerate = !process.argv.includes('--from-sku');
+  // 【2026-09-22 定稿】默认用目录里的 SKU_1（800x800 正视图、纯白底）作为白底图 —— 结果可控。
+  //
+  // 为什么不用页面自带的「从主图生成」：实测它**不是随机**（三次结果一致），
+  // 但挑中的是第 5 张斜拍主图，而且**点选主图、删除重生成都无法影响它**，
+  // 页面也没有"选择源图"的入口 —— 即无法指定用哪张主图。想要正视图只能用 SKU_1。
+  // 代价是多花约 4 秒；要改用页面生成，加 --generate。
+  const useGenerate = process.argv.includes('--generate');
 
   // 选图规则：优先用 --file 指定的那张；否则取 SKU_ 里序号为 1 的那张（SKU_1_全包精孔软壳）
   let targetFile = getArg('file');
