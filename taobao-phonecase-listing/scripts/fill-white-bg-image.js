@@ -211,6 +211,9 @@ async function main() {
   }
 
   if (useGenerate) {
+    // 注：曾试过"生成前先点选第 1 张 1:1 主图"来影响源图，实测**无效**——
+    // 点与不点，生成的都是同一张（2026-09-22 验证，见工作记录第二十六节）。
+    // 页面没有提供选择源图的入口，要指定白底图只能用 --from-sku。
     // 点「从主图生成」→ 等槽位被填上（可能要弹确认框）
     const btn = scope.locator('button').filter({ hasText: /从主图生成/ }).first();
     if (!(await btn.count())) {

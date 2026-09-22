@@ -93,7 +93,8 @@ async function main() {
   steps.push(runStep('4. 换标题', 'set-listing-title.js', ['--item', itemPath]));
   steps.push(runStep('5. SKU 颜色图（一次多选）', 'fill-sku-color-images.js', ['--dir', dir]));
   steps.push(runStep('6. 详情图（一次多选）', 'fill-detail-images.js', ['--dir', dir]));
-  steps.push(runStep('7. 白底图（放 SKU_1）', 'fill-white-bg-image.js', ['--dir', dir]));
+  // 白底图：默认用页面「从主图生成」。（曾试过先点选第 1 张主图来指定源图，实测无效。）
+  steps.push(runStep('7. 白底图（从主图生成）', 'fill-white-bg-image.js', ['--dir', dir]));
   // 型号：模板商品里已经写死固定值，复制时会一起带过来
   //（实测：复制页的「改前」就是模板里的值），所以默认不再用北京时间覆盖它。
   // 需要恢复旧行为时加 --set-model。
