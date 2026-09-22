@@ -212,7 +212,7 @@ async function main() {
   const picked = await selectByName(page, baseName);
   console.log('   勾选: ' + JSON.stringify(picked));
   if (!picked.ok) {
-    const shot = await screenshot(page, outDir, 'select-failed');
+    const shot = await screenshot(page, outDir, 'select-failed', { always: true });
     console.error('截图: ' + shot);
     process.exit(1);
   }

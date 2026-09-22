@@ -293,22 +293,8 @@ async function main() {
   }
 
   frame = page.frames().find((f) => f.url().includes(SELECTOR_IFRAME));
-  const summary = frame
-    ? await frame.evaluate(() => {
-        const names = Array.from(document.querySelectorAll('label.next-checkbox-wrapper')).map((el) => {
-          let node = el;
-          let best = '';
-          for (let d = 0; d < 5 && node; d++) {
-            const t = (node.innerText || '').replace(/\s+/g, ' ').trim();
-            if (t.length > best.length && t.length < 120) best = t;
-            node = node.parentElement;
-          }
-          return (best.match(/^[^\s]+\.(jpg|jpeg|png|webp|bmp|gif)/i) || [])[0] || '';
-        }).filter(Boolean);
-        return { cardCount: names.length, topNames: names.slice(0, 12) };
-      })
-    : { cardCount: 0, topNames: [] };
-
+  // 上传是否成功，以接口回执为准（上面已收齐 N/N 个），不再去列表里回读"现有卡片"。
+  // 那个回读从来没读到过东西（一直是 0），既没意义又要多跑一次 iframe 遍历。
   const risk = await detectRiskSignals(page);
   const shot = await screenshot(page, outDir, 'after-bulk-upload');
   fs.writeFileSync(
@@ -323,7 +309,6 @@ async function main() {
         totalMs,
         successMarkerSeen: successMarker,
         oldWaitMs: waitMs,
-        summary,
         risk,
         screenshot: shot,
       },
@@ -334,12 +319,8 @@ async function main() {
   );
 
   console.log('');
-  console.log('素材中心现有卡片: ' + summary.cardCount + ' 个');
-  console.log('最新几张: ' + JSON.stringify(summary.topNames, null, 1));
+  console.log('上传结果: ' + accepted.length + '/' + files.length + ' 个文件已被平台收下');
   if (risk.length) console.log('风控信号: ' + risk.map((r) => r.id).join(', '));
-  console.log('截图: ' + shot);
-  console.log('');
-  console.log('请核对上面"最新几张"里有没有你刚投的图。');
   console.log('=== 只上传到图片空间，没有填任何槽位、没有提交。 ===');
 
   await page.keyboard.press('Escape').catch(() => {});

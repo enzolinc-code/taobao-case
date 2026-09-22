@@ -129,7 +129,10 @@ async function main() {
   }
 
   const risk = await detectRiskSignals(page);
-  const shot = await screenshot(page, outDir, 'after-submit');
+  // 只有"没判定为成功"时才截图留证（成功路径不截，省算力）
+  const shot = await screenshot(page, outDir, 'after-submit', {
+    always: !(result && result.kind === 'success'),
+  });
   fs.writeFileSync(
     path.join(outDir, 'submit-report.json'),
     JSON.stringify({ snapshot, result, risk, screenshot: shot }, null, 2),

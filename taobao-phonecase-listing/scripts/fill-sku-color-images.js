@@ -230,7 +230,7 @@ async function main() {
 
   console.log('抽屉打开: ' + drawerOpen);
   if (!drawerOpen) {
-    console.log('截图: ' + (await screenshot(page, outDir, 'no-drawer')));
+    console.log('截图: ' + (await screenshot(page, outDir, 'no-drawer', { always: true })));
     process.exit(1);
   }
 
@@ -256,7 +256,7 @@ async function main() {
 
   if (dryRun) {
     console.log('（dry-run：只做到启用模式，不选图）');
-    console.log('截图: ' + (await screenshot(page, outDir, 'dry-run')));
+    console.log('截图: ' + (await screenshot(page, outDir, 'dry-run', { always: true })));
     process.exit(toggled.ok ? 0 : 1);
   }
 
@@ -264,7 +264,7 @@ async function main() {
   const uploadEntry = page.locator('#struct-p-1627207 li.has-upload-img div.sell-color-option-image-upload').first();
   if (!(await uploadEntry.count())) {
     console.error('颜色项里没有 sell-color-option-image-upload（启用模式那步可能没生效）');
-    console.log('截图: ' + (await screenshot(page, outDir, 'no-upload-entry')));
+    console.log('截图: ' + (await screenshot(page, outDir, 'no-upload-entry', { always: true })));
     process.exit(1);
   }
   await uploadEntry.scrollIntoViewIfNeeded().catch(() => {});
@@ -301,7 +301,7 @@ async function main() {
   const picked = await pickImagesInMaterialCenter(page, baseNames);
   console.log('选图结果: ' + JSON.stringify(picked));
   if (!picked.picked.length) {
-    console.log('截图: ' + (await screenshot(page, outDir, 'pick-failed')));
+    console.log('截图: ' + (await screenshot(page, outDir, 'pick-failed', { always: true })));
     process.exit(1);
   }
 

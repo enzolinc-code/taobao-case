@@ -235,7 +235,7 @@ async function main() {
     console.log('清空旧详情: ' + JSON.stringify(cleared));
     mark('清空旧详情（含确认弹窗）');
     if (!cleared.cleared) {
-      console.log('截图: ' + (await screenshot(page, outDir, 'clear-failed')));
+      console.log('截图: ' + (await screenshot(page, outDir, 'clear-failed', { always: true })));
       process.exit(1);
     }
   }
@@ -261,7 +261,7 @@ async function main() {
   console.log('勾选结果: ' + JSON.stringify(selected));
   mark('勾选 8 张');
   if (!selected.picked.length) {
-    console.log('截图: ' + (await screenshot(page, outDir, 'select-failed')));
+    console.log('截图: ' + (await screenshot(page, outDir, 'select-failed', { always: true })));
     process.exit(1);
   }
 

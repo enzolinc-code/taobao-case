@@ -292,7 +292,17 @@ async function uploadViaChooser(ctx, selector, files, index = 0) {
   await chooser.setFiles(files);
 }
 
-async function screenshot(page, dir, name) {
+// 截图开关：发布页整页约 5000 像素高，一张 PNG 0.7–1 MB，fullPage 截图本身也要一两秒。
+// 每步都截的话，一条链接要多花十几秒、多写约 5 MB —— 这是纯粹的算力/磁盘开销。
+// 策略：**成功路径默认不截**，只有两种情况才截：
+//   1. 出错诊断（调用时传 { always: true }）；
+//   2. 显式要求留证（设 TAOBAO_SHOTS=1 或加 --shots 参数）。
+function shotsEnabled() {
+  return process.env.TAOBAO_SHOTS === '1' || process.argv.includes('--shots');
+}
+
+async function screenshot(page, dir, name, opts = {}) {
+  if (!opts.always && !shotsEnabled()) return '';
   ensureDir(dir);
   const file = path.join(dir, name + '.png');
   try {
@@ -374,6 +384,7 @@ module.exports = {
   sleep,
   waitUntil,
   waitForPickerContent,
+  shotsEnabled,
   pace,
   connect,
   publishUrl,
