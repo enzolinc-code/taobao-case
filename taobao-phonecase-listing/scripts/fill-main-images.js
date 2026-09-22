@@ -26,6 +26,9 @@ const CONTAINERS = {
   main34: { selector: '#struct-threeToFourImages', label: '3:4 主图', prefix: '主图3比4' },
 };
 
+const MAIN_SELECTOR = '#struct-mainImagesGroup';
+const MAIN34_SELECTOR = '#struct-threeToFourImages';
+
 const SELECTOR_IFRAME = 'sucai-selector-ng';
 
 // 点空槽打开素材中心。关键：iframe 是**常驻挂载**的，弹窗没开时它也在 DOM 里，
@@ -163,6 +166,49 @@ async function selectManyByName(page, baseNames) {
   return { ok: missing.length === 0, picked, missing };
 }
 
+// 用页面自带的「从3:4主图裁剪」把 1:1 主图生成出来，省掉 5 张图的上传和勾选。
+// 前提：3:4 主图必须先填好。
+async function deriveMainFrom34(page, client) {
+  const before = await readSlots(page, MAIN_SELECTOR);
+  if (!before.error && before.empty === 0) {
+    console.log('  1:1 已经有 ' + before.filled + ' 张，跳过裁剪');
+    return { ok: true, skipped: true, before, after: before };
+  }
+
+  const scope = page.locator(MAIN_SELECTOR).first();
+  const btn = scope.locator('button').filter({ hasText: /从3:4主图裁剪/ }).first();
+  if (!(await btn.count())) {
+    return { ok: false, reason: '没找到「从3:4主图裁剪」按钮', before };
+  }
+  await btn.scrollIntoViewIfNeeded().catch(() => {});
+  await sleep(700);
+
+  const t0 = Date.now();
+  // 这个页面的事件委托挑食，用 CDP 真实鼠标点击更稳
+  const box = await btn.boundingBox();
+  if (box && client) {
+    await cdpClickAt(client, Math.round(box.x + box.width / 2), Math.round(box.y + box.height / 2));
+  } else {
+    await btn.click().catch(() => {});
+  }
+
+  // 可能直接填好，也可能弹一个确认框（有「确定/裁剪」就点掉）
+  let after = await readSlots(page, MAIN_SELECTOR);
+  for (let i = 0; i < 30 && after.empty !== 0; i++) {
+    await sleep(500);
+    const dlg = page.locator('.next-dialog button').filter({ hasText: /^(确定|确认|裁剪|应用)$/ }).first();
+    if (await dlg.count()) {
+      await dlg.click().catch(() => {});
+      console.log('   弹窗里点了「' + ((await dlg.innerText().catch(() => '')) || '').trim() + '」');
+      await sleep(800);
+    }
+    after = await readSlots(page, MAIN_SELECTOR);
+  }
+  const ms = Date.now() - t0;
+  console.log('  裁剪生成 1:1: ' + (after.empty === 0 ? '成功' : '失败') + '，用时 ' + ms + ' ms');
+  return { ok: after.empty === 0, before, after, ms };
+}
+
 async function confirmSelection(page) {
   // 只在"选完槽位还没变"时才会走到这里（见 fillGroup 的说明）。
   // 等待时长保持和老版本一致（10 次 × 1.5 秒），保证兜底行为不比以前差；
@@ -233,7 +279,7 @@ async function main() {
   const dir = getArg('dir');
   const group = (getArg('group') || 'both').toLowerCase();
   if (!dir) {
-    console.error('用法: node fill-main-images.js --dir <产品图片目录> --group main|main34|both');
+    console.error('用法: node fill-main-images.js --dir <产品图片目录> --group main|main34|both|derive');
     process.exit(1);
   }
   const assets = loadAssets(dir, {});
@@ -245,7 +291,8 @@ async function main() {
   const targets = [];
   if ((group === 'both' || group === 'main') && assets.main.length) targets.push(['main', assets.main]);
   if ((group === 'both' || group === 'main34') && assets.main34.length) targets.push(['main34', assets.main34]);
-  if (!targets.length) {
+  const wantDerive = group === 'derive';
+  if (!targets.length && !wantDerive) {
     console.error('没有可填的主图');
     process.exit(1);
   }
@@ -270,6 +317,18 @@ async function main() {
     results.push({ group: name, ...result });
     if (!result.ok) break;
     await sleep(1500);
+  }
+
+  // 用「从3:4主图裁剪」生成 1:1（省掉 5 张图的上传与勾选）
+  if (wantDerive || process.argv.includes('--derive-main')) {
+    if (results.some((r) => !r.ok)) {
+      console.log('=== 跳过「从3:4主图裁剪」（前面有步骤失败）');
+    } else {
+      console.log('=== 从 3:4 主图裁剪生成 1:1');
+      const d = await deriveMainFrom34(page, client);
+      console.log('  → ' + (d.ok ? '成功' : '失败: ' + d.reason) + '  ' + JSON.stringify(d.after || {}));
+      results.push({ group: 'derive', ...d });
+    }
   }
 
   const risk = await detectRiskSignals(page);

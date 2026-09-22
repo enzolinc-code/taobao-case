@@ -82,7 +82,14 @@ async function main() {
   // 顺序说明：素材刚传完就紧接着做主图 —— 此时素材中心是热的、弹窗状态最干净，
   // 主图又是最不能出错的一项，先做完再处理标题等次要字段。
   // 标题放在主图之后，避免打字/失焦把素材中心的目录状态搅乱。
-  steps.push(runStep('3. 主图（1:1 + 3:4，一次多选）', 'fill-main-images.js', ['--dir', dir, '--group', 'both']));
+  //
+  // 【2026-09-22 起】主图只传/只选 3:4 那 5 张，1:1 用页面自带的
+  // 「从3:4主图裁剪」生成 —— 少传 5 张图、少开一次素材中心。
+  // 想恢复"1:1 也上传并手选"，把 --group 改回 both 并去掉 --derive-main，
+  // 上传步骤同时加 --with-1x1。
+  steps.push(
+    runStep('3. 主图（填 3:4，再由 3:4 裁出 1:1）', 'fill-main-images.js', ['--dir', dir, '--group', 'main34', '--derive-main'])
+  );
   steps.push(runStep('4. 换标题', 'set-listing-title.js', ['--item', itemPath]));
   steps.push(runStep('5. SKU 颜色图（一次多选）', 'fill-sku-color-images.js', ['--dir', dir]));
   steps.push(runStep('6. 详情图（一次多选）', 'fill-detail-images.js', ['--dir', dir]));

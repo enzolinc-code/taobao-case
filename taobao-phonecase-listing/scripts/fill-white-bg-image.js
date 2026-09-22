@@ -150,13 +150,17 @@ async function settleSelection(page) {
 async function main() {
   const dir = getArg('dir');
   if (!dir) {
-    console.error('用法: node fill-white-bg-image.js --dir <产品图片目录> [--file SKU_1_xxx.jpg]');
+    console.error('用法: node fill-white-bg-image.js --dir <产品图片目录> [--from-sku]');
     process.exit(1);
   }
 
+  // 【2026-09-22 起】默认用页面自带的「从主图生成」——一次点击就生成白底图，
+  // 不用开素材中心、不用选图（原来那步要 5–6 秒）。想改回"放 SKU_1 那张图"加 --from-sku。
+  const useGenerate = !process.argv.includes('--from-sku');
+
   // 选图规则：优先用 --file 指定的那张；否则取 SKU_ 里序号为 1 的那张（SKU_1_全包精孔软壳）
   let targetFile = getArg('file');
-  if (!targetFile) {
+  if (!useGenerate && !targetFile) {
     const assets = loadAssets(dir, {});
     const entry = Object.entries(assets.sku || {}).find(([k]) => /^1[_\-\s]/.test(k));
     if (!entry) {
@@ -165,8 +169,8 @@ async function main() {
     }
     targetFile = entry[1];
   }
-  const baseName = path.basename(targetFile).replace(/\.[^.]+$/, '');
-  console.log('白底图使用: ' + path.basename(targetFile));
+  const baseName = targetFile ? path.basename(targetFile).replace(/\.[^.]+$/, '') : '';
+  console.log(useGenerate ? '白底图：用页面「从主图生成」' : '白底图使用: ' + path.basename(targetFile));
 
   const outRoot = path.resolve(getArg('out') || path.join(process.cwd(), '_listing-work'));
   const outDir = path.join(outRoot, 'whitebg-' + new Date().toISOString().replace(/[:.]/g, '-'));
@@ -199,6 +203,47 @@ async function main() {
 
   const client = await page.context().newCDPSession(page);
   const t0 = Date.now();
+
+  if (before.empty === 0) {
+    console.log('白底图已有内容，跳过');
+    console.log('=== 未提交商品。 ===');
+    process.exit(0);
+  }
+
+  if (useGenerate) {
+    // 点「从主图生成」→ 等槽位被填上（可能要弹确认框）
+    const btn = scope.locator('button').filter({ hasText: /从主图生成/ }).first();
+    if (!(await btn.count())) {
+      console.error('没找到「从主图生成」按钮');
+      process.exit(1);
+    }
+    await btn.scrollIntoViewIfNeeded().catch(() => {});
+    await sleep(600);
+    const box = await btn.boundingBox();
+    if (box) await cdpClickAt(client, Math.round(box.x + box.width / 2), Math.round(box.y + box.height / 2));
+    else await btn.click().catch(() => {});
+    mark('点「从主图生成」');
+
+    let after = await readSlots(page);
+    for (let i = 0; i < 30 && after.empty !== 0; i++) {
+      await sleep(500);
+      const dlg = page.locator('.next-dialog button').filter({ hasText: /^(确定|确认|生成|应用)$/ }).first();
+      if (await dlg.count()) {
+        await dlg.click().catch(() => {});
+        console.log('   弹窗里点了「确定」');
+        await sleep(800);
+      }
+      after = await readSlots(page);
+    }
+    const risk2 = await detectRiskSignals(page);
+    const shot2 = await screenshot(page, outDir, 'after');
+    console.log('白底图现在: ' + JSON.stringify(after) + '（用时 ' + Math.round((Date.now() - t0) / 1000) + ' 秒）');
+    if (risk2.length) console.log('风控信号: ' + risk2.map((r) => r.id).join(', '));
+    console.log('截图: ' + shot2);
+    console.log('=== 未提交商品。 ===');
+    process.exit(after.empty === 0 ? 0 : 1);
+  }
+
   if (!(await openPickerFromSlot(page, scope, client))) {
     console.error('点了白底图空槽但素材中心没出现');
     process.exit(1);

@@ -8,6 +8,9 @@
 // 素材中心的上传控件支持多选（实测 multiple=true），所以先整批传进去，
 // 后面各个位置只需要「按文件名挑」——挑比传快得多。
 //
+// 【2026-09-22 起】默认**不传 1:1 主图（主图_N.jpg）**：发布页的 1:1 主图可以直接
+// 用「从3:4主图裁剪」生成，那 5 张就不必上传、也不必挑了。要恢复传全部，加 --with-1x1。
+//
 // 用法: node bulk-upload-assets.js --dir <产品图片目录> [--limit N]
 
 const fs = require('fs');
@@ -96,6 +99,8 @@ async function main() {
     .readdirSync(root)
     .filter((name) => IMAGE_EXT.test(name))
     .filter((name) => !SKIP_PREFIX.some((prefix) => name.startsWith(prefix)))
+    // 默认跳过 1:1 主图（主图_1.jpg … 主图_5.jpg）；注意别误伤 主图3比4_01.jpg
+    .filter((name) => process.argv.includes('--with-1x1') || !/^主图_\d/.test(name))
     .map((name) => path.join(root, name));
   const limit = Number(getArg('limit') || 0);
   if (limit > 0) files = files.slice(0, limit);
