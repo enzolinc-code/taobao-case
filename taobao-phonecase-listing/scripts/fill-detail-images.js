@@ -17,6 +17,7 @@ const {
   sleep,
   waitUntil,
   waitForPickerContent,
+  switchToAllImages,
   screenshot,
   ensureDir,
   getArg,
@@ -93,21 +94,12 @@ async function clearOldDetail(page) {
 
 // 在素材中心里按名字勾选多张
 // 先切到「全部图片」根目录：上传的图都在那里；停在别的目录会看不到自己的图（实测）。
-async function switchToAllImages(frame) {
-  const item = frame.locator('text=全部图片').first();
-  if (await item.count()) {
-    await item.click().catch(() => {});
-    await sleep(3500);
-    return true;
-  }
-  return false;
-}
-
 async function selectImagesByName(page, baseNames) {
   const frame = page.frames().find((f) => f.url().includes(SELECTOR_IFRAME));
   if (!frame) return { ok: false, reason: '素材中心 iframe 没出现', picked: [] };
 
-  console.log('  切到「全部图片」目录: ' + (await switchToAllImages(frame)));
+  const sw = await switchToAllImages(page);
+  console.log('  切到「全部图片」目录: ' + (sw.ok ? (sw.alreadyThere ? '本来就在（0 秒）' : sw.ms + ' ms') : '失败'));
 
   const picked = [];
   const missing = [];

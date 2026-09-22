@@ -25,6 +25,7 @@ const {
   sleep,
   waitUntil,
   waitForPickerContent,
+  switchToAllImages,
   screenshot,
   ensureDir,
   getArg,
@@ -97,12 +98,9 @@ async function pickImagesInMaterialCenter(page, baseNames) {
   let frame = page.frames().find((f) => f.url().includes(SELECTOR_IFRAME));
   if (!frame) return { ok: false, reason: '素材中心没出现', picked: [], missing: baseNames };
 
-  const allImages = frame.locator('text=全部图片').first();
-  if (await allImages.count()) {
-    await allImages.click().catch(() => {});
-    await sleep(3000);
-    frame = page.frames().find((f) => f.url().includes(SELECTOR_IFRAME)) || frame;
-  }
+  const sw = await switchToAllImages(page);
+  console.log('   切到「全部图片」目录: ' + (sw.ok ? (sw.alreadyThere ? '本来就在（0 秒）' : sw.ms + ' ms') : '失败'));
+  frame = page.frames().find((f) => f.url().includes(SELECTOR_IFRAME)) || frame;
 
   const picked = [];
   const missing = [];

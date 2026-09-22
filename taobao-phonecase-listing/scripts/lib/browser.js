@@ -94,6 +94,54 @@ async function waitForPickerContent(page, options = {}) {
   );
 }
 
+// 「全部图片」这个树节点是不是当前所在的目录？
+// 判据：该节点本身或它的祖先带 next-selected 类（实测这个类就挂在
+// DIV.next-tree-node-inner 上，只有当前目录才有）。
+// 为什么要这个判断：切目录后面原来是一刀切 sleep(3000)，但实测打开素材中心时
+// 它往往已经停在「全部图片」（素材中心会记住上次的目录），那 3 秒纯属白等。
+async function isAllImagesFolder(page, frameUrlPart = 'sucai-selector-ng') {
+  const frame = page.frames().find((f) => f.url().includes(frameUrlPart));
+  if (!frame) return false;
+  return frame
+    .evaluate(() => {
+      const nodes = [...document.querySelectorAll('*')].filter((el) => {
+        const t = (el.innerText || '').trim();
+        return t === '全部图片' && el.children.length === 0;
+      });
+      for (const n of nodes) {
+        let p = n;
+        for (let i = 0; i < 6 && p; i++) {
+          if (typeof p.className === 'string' && p.className.includes('next-selected')) return true;
+          p = p.parentElement;
+        }
+      }
+      return false;
+    })
+    .catch(() => false);
+}
+
+// 切到「全部图片」目录。已在的话直接返回（0 秒）；否则点一下并**等它真的变成选中态**，
+// 而不是盲等固定秒数。
+async function switchToAllImages(page, options = {}) {
+  const frameUrlPart = options.frameUrlPart || 'sucai-selector-ng';
+  if (await isAllImagesFolder(page, frameUrlPart)) {
+    return { ok: true, alreadyThere: true, ms: 0 };
+  }
+  const frame = page.frames().find((f) => f.url().includes(frameUrlPart));
+  if (!frame) return { ok: false, reason: '素材中心没出现', ms: 0 };
+  const item = frame.locator('text=全部图片').first();
+  if (!(await item.count())) return { ok: false, reason: '没找到「全部图片」', ms: 0 };
+
+  const t0 = Date.now();
+  await item.click().catch(() => {});
+  const r = await waitUntil(() => isAllImagesFolder(page, frameUrlPart), {
+    timeoutMs: options.timeoutMs ?? 6000,
+    intervalMs: 200,
+    minMs: 300,
+  });
+  return { ok: r.ok, switched: true, ms: Date.now() - t0 };
+}
+
 // 两次操作之间的随机停顿。固定节奏本身就是风控特征。
 async function pace(minMs, maxMs) {
   const min = minMs ?? Number(process.env.TAOBAO_PACE_MIN_MS || 400);
@@ -385,6 +433,8 @@ module.exports = {
   waitUntil,
   waitForPickerContent,
   shotsEnabled,
+  isAllImagesFolder,
+  switchToAllImages,
   pace,
   connect,
   publishUrl,

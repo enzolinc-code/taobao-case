@@ -17,6 +17,7 @@ const {
   connect,
   sleep,
   waitForPickerContent,
+  switchToAllImages,
   screenshot,
   ensureDir,
   getArg,
@@ -81,22 +82,12 @@ async function openPickerFromSlot(page, scope, client) {
   return false;
 }
 
-async function switchToAllImages(frame) {
-  const item = frame.locator('text=全部图片').first();
-  if (await item.count()) {
-    await item.click().catch(() => {});
-    await sleep(3000);
-    return true;
-  }
-  return false;
-}
-
 async function selectByName(page, name) {
   let frame = page.frames().find((f) => f.url().includes(SELECTOR_IFRAME));
   if (!frame) return { ok: false, reason: '素材中心没出现' };
 
-  const switched = await switchToAllImages(frame);
-  console.log('    切到「全部图片」目录: ' + switched);
+  const sw = await switchToAllImages(page);
+  console.log('    切到「全部图片」目录: ' + (sw.ok ? (sw.alreadyThere ? '本来就在（0 秒）' : sw.ms + ' ms') : '失败'));
   frame = page.frames().find((f) => f.url().includes(SELECTOR_IFRAME)) || frame;
 
   // 一次把整列名字读回来本地比对（比逐个候选来回问快得多）
@@ -191,6 +182,11 @@ async function main() {
   await page.keyboard.press('Escape').catch(() => {});
   await sleep(1200);
 
+  // 分段计时：先量清楚时间花在哪，再决定优化什么
+  const tStart = Date.now();
+  const mark = (label) => console.log('   ⏱ ' + label + ': ' + ((Date.now() - tStart) / 1000).toFixed(1) + ' 秒');
+  mark('启动');
+
   const scope = page.locator(CONTAINER).first();
   if (!(await scope.count())) {
     console.error('找不到白底图容器 ' + CONTAINER);
@@ -199,6 +195,7 @@ async function main() {
 
   const before = await readSlots(page);
   console.log('白底图当前: ' + JSON.stringify(before));
+  mark('读槽位状态');
 
   const client = await page.context().newCDPSession(page);
   const t0 = Date.now();
@@ -206,11 +203,14 @@ async function main() {
     console.error('点了白底图空槽但素材中心没出现');
     process.exit(1);
   }
+  mark('打开素材中心弹窗');
   const ready = await waitForPickerContent(page, { timeoutMs: 8000 });
   console.log('   素材中心就绪 ' + ready.ms + ' ms');
+  mark('等内容就绪');
 
   const picked = await selectByName(page, baseName);
   console.log('   勾选: ' + JSON.stringify(picked));
+  mark('切目录+勾选');
   if (!picked.ok) {
     const shot = await screenshot(page, outDir, 'select-failed', { always: true });
     console.error('截图: ' + shot);
@@ -218,6 +218,7 @@ async function main() {
   }
 
   const after = await settleSelection(page);
+  mark('确认生效');
   const risk = await detectRiskSignals(page);
   const shot = await screenshot(page, outDir, 'after');
   console.log('白底图现在: ' + JSON.stringify(after) + '（用时 ' + Math.round((Date.now() - t0) / 1000) + ' 秒）');

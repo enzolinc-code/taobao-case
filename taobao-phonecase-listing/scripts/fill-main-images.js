@@ -13,6 +13,7 @@ const {
   connect,
   sleep,
   waitForPickerContent,
+  switchToAllImages,
   screenshot,
   ensureDir,
   getArg,
@@ -101,22 +102,12 @@ async function readSlots(page, selector) {
 // 素材中心里按文件名勾选多张（自定义复选框 → 派发 DOM click）
 // 先切到「全部图片」根目录：上传的图都在那里，别停在「复制宝贝」自动建的目录里，
 // 否则那一屏根本看不到自己的图（实测卡了很久）。
-async function switchToAllImages(frame) {
-  const item = frame.locator('text=全部图片').first();
-  if (await item.count()) {
-    await item.click().catch(() => {});
-    await sleep(3500);
-    return true;
-  }
-  return false;
-}
-
 async function selectManyByName(page, baseNames) {
   let frame = page.frames().find((f) => f.url().includes(SELECTOR_IFRAME));
   if (!frame) return { ok: false, reason: '素材中心没出现', picked: [], missing: baseNames };
 
-  const switched = await switchToAllImages(frame);
-  console.log('    切到「全部图片」目录: ' + switched);
+  const sw = await switchToAllImages(page);
+  console.log('    切到「全部图片」目录: ' + (sw.ok ? (sw.alreadyThere ? '本来就在（0 秒）' : sw.ms + ' ms') : '失败'));
   frame = page.frames().find((f) => f.url().includes(SELECTOR_IFRAME)) || frame;
 
   const picked = [];

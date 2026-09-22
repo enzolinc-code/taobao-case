@@ -17,6 +17,7 @@ const {
   sleep,
   waitUntil,
   waitForPickerContent,
+  switchToAllImages,
   screenshot,
   ensureDir,
   getArg,
@@ -135,13 +136,10 @@ async function main() {
 
   // 先切到「全部图片」根目录：不切的话会落在「复制宝贝」自动建的目录里，
   // 后面按名字挑图就找不到（这个坑今天踩了两次）。
-  const allImages = frame.locator('text=全部图片').first();
-  if (await allImages.count()) {
-    await allImages.click().catch(() => {});
-    await sleep(3000);
-    console.log('已切到「全部图片」目录');
-    frame = page.frames().find((f) => f.url().includes(SELECTOR_IFRAME)) || frame;
-  }
+  // 已在的话直接跳过；不在才点，并等它真的变成选中态。
+  const sw = await switchToAllImages(page);
+  console.log('已切到「全部图片」目录: ' + (sw.ok ? (sw.alreadyThere ? '本来就在（0 秒）' : sw.ms + ' ms') : '失败'));
+  frame = page.frames().find((f) => f.url().includes(SELECTOR_IFRAME)) || frame;
 
   console.log('一次性投递 ' + files.length + ' 个文件:');
   files.forEach((f) => console.log('    ' + path.basename(f)));
