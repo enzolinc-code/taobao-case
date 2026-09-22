@@ -1,0 +1,24 @@
+{
+  "_用法": "复制成 机型清单.json，放在商品文件夹的上一级目录（脚本会往上找）。全店共用这一份，改它所有引用它的商品一起生效。",
+  "_命名": "name 就是填进 SKU 轴的值，必须全店统一。颜色这类下拉轴要用平台原词；机型这类自定义轴保持写法统一即可。",
+  "_code": "code 用来拼商家编码（item.outerIdPattern），可以留空。",
+
+  "updatedAt": "2026-09-20",
+
+  "axes": {
+    "适用机型": [
+      { "name": "iPhone 15 Pro", "code": "IP15P", "group": "苹果", "enabled": true },
+      { "name": "iPhone 15", "code": "IP15", "group": "苹果", "enabled": true },
+      { "name": "iPhone 14 Pro", "code": "IP14P", "group": "苹果", "enabled": true },
+      { "name": "iPhone 14", "code": "IP14", "group": "苹果", "enabled": true },
+      { "name": "iPhone 13", "code": "IP13", "group": "苹果", "enabled": false },
+      { "name": "华为 Mate 60 Pro", "code": "M60P", "group": "华为", "enabled": true },
+      { "name": "小米 14", "code": "MI14", "group": "小米", "enabled": true }
+    ],
+    "颜色": [
+      { "name": "黑色磨砂", "code": "BLK" },
+      { "name": "透明白", "code": "CLR" },
+      { "name": "深蓝", "code": "NVY" }
+    ]
+  }
+}

@@ -1,0 +1,455 @@
+{
+  "axes": {
+    "颜色分类": [
+      {
+        "name": "软壳全包（亮面）",
+        "code": "GLOSS",
+        "group": "款式",
+        "enabled": true
+      },
+      {
+        "name": "大孔二合一（磨砂）",
+        "code": "MATTE",
+        "group": "款式",
+        "enabled": true
+      },
+      {
+        "name": "大孔二合一（磁吸）",
+        "code": "MAG",
+        "group": "款式",
+        "enabled": true
+      }
+    ],
+    "适用手机型号": [
+      {
+        "name": "iPhone 18 Pro",
+        "code": "IP-18P",
+        "group": "苹果",
+        "enabled": true
+      },
+      {
+        "name": "iPhone 18 Pro Max",
+        "code": "IP-18PM",
+        "group": "苹果",
+        "enabled": true
+      },
+      {
+        "name": "iPhone 17",
+        "code": "IP-17",
+        "group": "苹果",
+        "enabled": true
+      },
+      {
+        "name": "iPhone 17 Pro",
+        "code": "IP-17P",
+        "group": "苹果",
+        "enabled": true
+      },
+      {
+        "name": "iPhone 17 Pro Max",
+        "code": "IP-17PM",
+        "group": "苹果",
+        "enabled": true
+      },
+      {
+        "name": "iPhone Air",
+        "code": "IP-AIR",
+        "group": "苹果",
+        "enabled": true
+      },
+      {
+        "name": "iPhone 16",
+        "code": "IP-16",
+        "group": "苹果",
+        "enabled": true
+      },
+      {
+        "name": "iPhone 16 plus",
+        "code": "IP-16PL",
+        "group": "苹果",
+        "enabled": true
+      },
+      {
+        "name": "iPhone 16 pro",
+        "code": "IP-16P",
+        "group": "苹果",
+        "enabled": true
+      },
+      {
+        "name": "iPhone 16 Pro Max",
+        "code": "IP-16PM",
+        "group": "苹果",
+        "enabled": true
+      },
+      {
+        "name": "iPhone 15",
+        "code": "IP-15",
+        "group": "苹果",
+        "enabled": true
+      },
+      {
+        "name": "iPhone 15 Plus",
+        "code": "IP-15PL",
+        "group": "苹果",
+        "enabled": true
+      },
+      {
+        "name": "iPhone 15 Pro",
+        "code": "IP-15P",
+        "group": "苹果",
+        "enabled": true
+      },
+      {
+        "name": "iPhone 15 Pro Max",
+        "code": "IP-15PM",
+        "group": "苹果",
+        "enabled": true
+      },
+      {
+        "name": "iPhone 14",
+        "code": "IP-14",
+        "group": "苹果",
+        "enabled": true
+      },
+      {
+        "name": "iPhone 14 Plus",
+        "code": "IP-14PL",
+        "group": "苹果",
+        "enabled": true
+      },
+      {
+        "name": "iPhone 14 Pro",
+        "code": "IP-14P",
+        "group": "苹果",
+        "enabled": true
+      },
+      {
+        "name": "iPhone 14 Pro Max",
+        "code": "IP-14PM",
+        "group": "苹果",
+        "enabled": true
+      },
+      {
+        "name": "iPhone 13",
+        "code": "IP-13",
+        "group": "苹果",
+        "enabled": true
+      },
+      {
+        "name": "iPhone 13 Pro",
+        "code": "IP-13P",
+        "group": "苹果",
+        "enabled": true
+      },
+      {
+        "name": "iPhone 13 Pro Max",
+        "code": "IP-13PM",
+        "group": "苹果",
+        "enabled": true
+      },
+      {
+        "name": "iPhone 12",
+        "code": "IP-12",
+        "group": "苹果",
+        "enabled": true
+      },
+      {
+        "name": "iPhone 12 Pro",
+        "code": "IP-12P",
+        "group": "苹果",
+        "enabled": true
+      },
+      {
+        "name": "iPhone 12 Pro Max",
+        "code": "IP-12PM",
+        "group": "苹果",
+        "enabled": true
+      },
+      {
+        "name": "iPhone 11",
+        "code": "IP-11",
+        "group": "苹果",
+        "enabled": true
+      },
+      {
+        "name": "iPhone 11 Pro",
+        "code": "IP-11P",
+        "group": "苹果",
+        "enabled": true
+      },
+      {
+        "name": "iPhone 11 Pro Max",
+        "code": "IP-11PM",
+        "group": "苹果",
+        "enabled": true
+      },
+      {
+        "name": "iPhone XS Max",
+        "code": "IP-XSMAX",
+        "group": "苹果",
+        "enabled": true
+      },
+      {
+        "name": "iPhone XS",
+        "code": "IP-XS",
+        "group": "苹果",
+        "enabled": true
+      },
+      {
+        "name": "iPhone XR",
+        "code": "IP-XR",
+        "group": "苹果",
+        "enabled": true
+      },
+      {
+        "name": "iPhone X",
+        "code": "IP-X",
+        "group": "苹果",
+        "enabled": true
+      },
+      {
+        "name": "华为Mate80",
+        "code": "HW-M80",
+        "group": "华为",
+        "enabled": true
+      },
+      {
+        "name": "华为Mate80 Pro",
+        "code": "HW-M80P",
+        "group": "华为",
+        "enabled": true
+      },
+      {
+        "name": "华为 Mate80 Pro Max",
+        "code": "HW-M80PM",
+        "group": "华为",
+        "enabled": true
+      },
+      {
+        "name": "华为Mate 70",
+        "code": "HW-M70",
+        "group": "华为",
+        "enabled": true
+      },
+      {
+        "name": "华为Mate 70Pro",
+        "code": "HW-M70P",
+        "group": "华为",
+        "enabled": true
+      },
+      {
+        "name": "华为 Mate 70 Pro+",
+        "code": "HW-M70P+",
+        "group": "华为",
+        "enabled": true
+      },
+      {
+        "name": "华为 Mate 60",
+        "code": "HW-M60",
+        "group": "华为",
+        "enabled": true
+      },
+      {
+        "name": "华为 Mate 60 Pro",
+        "code": "HW-M60P",
+        "group": "华为",
+        "enabled": true
+      },
+      {
+        "name": "华为 Mate 60 Pro+",
+        "code": "HW-M60P+",
+        "group": "华为",
+        "enabled": true
+      },
+      {
+        "name": "华为 Mate 50",
+        "code": "HW-M50",
+        "group": "华为",
+        "enabled": true
+      },
+      {
+        "name": "华为 Mate 50 Pro",
+        "code": "HW-M50P",
+        "group": "华为",
+        "enabled": true
+      },
+      {
+        "name": "华为 Mate 40",
+        "code": "HW-M40",
+        "group": "华为",
+        "enabled": true
+      },
+      {
+        "name": "华为 Mate 40 Pro",
+        "code": "HW-M40P",
+        "group": "华为",
+        "enabled": true
+      },
+      {
+        "name": "华为 Mate 30",
+        "code": "HW-M30",
+        "group": "华为",
+        "enabled": true
+      },
+      {
+        "name": "华为 Mate 30 Pro",
+        "code": "HW-M30P",
+        "group": "华为",
+        "enabled": true
+      },
+      {
+        "name": "华为 Nova16",
+        "code": "HW-N16",
+        "group": "华为",
+        "enabled": true
+      },
+      {
+        "name": "华为 Nova16 Pro",
+        "code": "HW-N16P",
+        "group": "华为",
+        "enabled": true
+      },
+      {
+        "name": "华为 nova 15",
+        "code": "HW-N15",
+        "group": "华为",
+        "enabled": true
+      },
+      {
+        "name": "华为 nova 15 Pro",
+        "code": "HW-N15P",
+        "group": "华为",
+        "enabled": true
+      },
+      {
+        "name": "华为 nova 15 Ultra",
+        "code": "HW-N15U",
+        "group": "华为",
+        "enabled": true
+      },
+      {
+        "name": "华为Nova14",
+        "code": "HW-N14",
+        "group": "华为",
+        "enabled": true
+      },
+      {
+        "name": "华为Nova14Pro",
+        "code": "HW-N14P",
+        "group": "华为",
+        "enabled": true
+      },
+      {
+        "name": "华为 Nova14 Ultra",
+        "code": "HW-N14U",
+        "group": "华为",
+        "enabled": true
+      },
+      {
+        "name": "华为Nova13",
+        "code": "HW-N13",
+        "group": "华为",
+        "enabled": true
+      },
+      {
+        "name": "华为Nova13Pro",
+        "code": "HW-N13P",
+        "group": "华为",
+        "enabled": true
+      },
+      {
+        "name": "华为 nova 12",
+        "code": "HW-N12",
+        "group": "华为",
+        "enabled": true
+      },
+      {
+        "name": "华为 nova 12 Ultra",
+        "code": "HW-N12U",
+        "group": "华为",
+        "enabled": true
+      },
+      {
+        "name": "华为 nova 12 Pro",
+        "code": "HW-N12P",
+        "group": "华为",
+        "enabled": true
+      },
+      {
+        "name": "华为 nova 12 活力版",
+        "code": "HW-N12V",
+        "group": "华为",
+        "enabled": true
+      },
+      {
+        "name": "华为 nova 11",
+        "code": "HW-N11",
+        "group": "华为",
+        "enabled": true
+      },
+      {
+        "name": "华为 nova 11 Ultra",
+        "code": "HW-N11U",
+        "group": "华为",
+        "enabled": true
+      },
+      {
+        "name": "华为 nova 11 Pro",
+        "code": "HW-N11P",
+        "group": "华为",
+        "enabled": true
+      },
+      {
+        "name": "华为 nova 10",
+        "code": "HW-N10",
+        "group": "华为",
+        "enabled": true
+      },
+      {
+        "name": "华为 nova 10 Pro",
+        "code": "HW-N10P",
+        "group": "华为",
+        "enabled": true
+      },
+      {
+        "name": "华为 nova 9",
+        "code": "HW-N9",
+        "group": "华为",
+        "enabled": true
+      },
+      {
+        "name": "华为 nova 9 Pro",
+        "code": "HW-N9P",
+        "group": "华为",
+        "enabled": true
+      },
+      {
+        "name": "华为 nova 9 SE",
+        "code": "HW-N9SE",
+        "group": "华为",
+        "enabled": true
+      },
+      {
+        "name": "华为 Pura90 Pro",
+        "code": "HW-P90P",
+        "group": "华为",
+        "enabled": true
+      },
+      {
+        "name": "华为 Pura90 Pro Max",
+        "code": "HW-P90PM",
+        "group": "华为",
+        "enabled": true
+      },
+      {
+        "name": "华为 Pura 80",
+        "code": "HW-P80",
+        "group": "华为",
+        "enabled": true
+      }
+    ]
+  },
+  "_用法": "全店共用一份机型表。放在商品文件夹的上一级，item.json 用 axes 引用它。",
+  "_来源": "由 structure.json 生成（来自商品自身 SKU 模板）。",
+  "updatedAt": "2026-09-20"
+}

@@ -1,0 +1,21 @@
+{
+  "catId": "",
+  "title": "适用于iPhone 15 Pro手机壳 黑猫磨砂防摔 全包镜头",
+  "price": 39.9,
+  "stock": 200,
+  "outerId": "PC-0413",
+  "outerIdPattern": "{prefix}-{适用机型.code}-{颜色.code}",
+  "attributes": {
+    "品牌": "其他/other"
+  },
+  "axes": {
+    "适用机型": {
+      "fromRegistry": "机型清单.json",
+      "axis": "适用机型",
+      "groups": ["苹果"],
+      "except": ["iPhone 13"]
+    },
+    "颜色": ["黑色磨砂", "透明白"]
+  },
+  "mainImages": ["images/main-01.jpg"]
+}

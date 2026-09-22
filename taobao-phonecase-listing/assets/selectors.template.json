@@ -1,0 +1,63 @@
+{
+  "_说明": [
+    "选择器必须来自 probe-publish-page.js 的实测输出，不要凭猜测填写。",
+    "key 是 item.json 的字段路径，支持 a.b；value 会按 key 取值，也可以用 value 直接写死。",
+    "strategy: type 真实键盘输入 / native 原生setter+事件 / choose 下拉或点击选项 / upload 直接塞文件 / filechooser 拦截文件选择 / skuTable SKU 矩阵 / manual 交人工。",
+    "填不准的先写 manual，让流程跑通，再逐条替换成实测选择器。"
+  ],
+  "catId": "[手机壳类目ID]",
+  "publishUrl": "https://item.upload.taobao.com/sell/v2/publish.htm?catId={catId}&fromAICategory=true",
+  "submitText": "提交宝贝信息",
+  "limits": {
+    "_说明": "这两个上限都要用 probe 实测确认，别照抄。maxSkuRows 留空表示不拦截。",
+    "titleChars": 60,
+    "maxSkuRows": null
+  },
+
+  "rules": [
+    {
+      "key": "title",
+      "strategy": "type",
+      "selector": "[宝贝标题输入框选择器]"
+    },
+    {
+      "key": "attributes.品牌",
+      "strategy": "choose",
+      "selector": "[品牌控件选择器]"
+    },
+    {
+      "key": "skus",
+      "strategy": "skuTable"
+    },
+    {
+      "key": "mainImages",
+      "strategy": "filechooser",
+      "selector": "[主图上传按钮选择器]"
+    }
+  ],
+
+  "sku": {
+    "_说明": "见 references/sku-table.md。axes 的键名必须和 item.json 里 axes 的键名一致。",
+    "axes": {
+      "适用机型": {
+        "strategy": "addValue",
+        "selector": "[机型输入框选择器]",
+        "addIndex": 0
+      },
+      "颜色": {
+        "strategy": "choose",
+        "selector": "[颜色选项控件选择器]",
+        "index": 0
+      }
+    },
+    "table": {
+      "_说明": "rowSelector 指整个 SKU 表的行；脚本按行文本里是否包含全部轴值来认行，不依赖列顺序。",
+      "rowSelector": "table tbody tr",
+      "cells": {
+        "price": { "strategy": "type", "selector": "input[placeholder*='价格']" },
+        "stock": { "strategy": "type", "selector": "input[placeholder*='数量']" },
+        "outerId": { "strategy": "type", "selector": "input[placeholder*='编码']" }
+      }
+    }
+  }
+}

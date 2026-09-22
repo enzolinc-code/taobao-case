@@ -1,0 +1,352 @@
+#!/usr/bin/env node
+'use strict';
+
+// 把产品图片目录里的图**一次性**传进图片空间（素材中心），跳过「删除*」命名的文件。
+//
+// 为什么要这一步：原来的流程是"每个位置点开弹窗 → 本地上传 → 传一张 → 完成"，
+// 10 张主图要重复 10 次上传，大部分时间耗在这上面。
+// 素材中心的上传控件支持多选（实测 multiple=true），所以先整批传进去，
+// 后面各个位置只需要「按文件名挑」——挑比传快得多。
+//
+// 用法: node bulk-upload-assets.js --dir <产品图片目录> [--limit N]
+
+const fs = require('fs');
+const path = require('path');
+const {
+  connect,
+  sleep,
+  waitUntil,
+  waitForPickerContent,
+  screenshot,
+  ensureDir,
+  getArg,
+  detectRiskSignals,
+} = require('./lib/browser');
+
+const IMAGE_EXT = /\.(jpg|jpeg|png|webp|bmp|gif)$/i;
+// 这些前缀不传：删除*（用户标记的废图），说明文件
+const SKIP_PREFIX = ['删除', '_'];
+
+const SELECTOR_IFRAME = 'sucai-selector-ng';
+
+function pickerOpen(page) {
+  return page
+    .evaluate(() =>
+      Array.from(document.querySelectorAll('.next-overlay-wrapper.opened')).some(
+        (o) => o.querySelector('iframe[src*="sucai-selector-ng"]') && o.getBoundingClientRect().width > 100
+      )
+    )
+    .catch(() => false);
+}
+
+async function openImageSelector(page, client) {
+  // 优先用已有槽位：空槽直接点；满了就用悬停菜单里的「替换」
+  const containers = ['#struct-mainImagesGroup', '#struct-threeToFourImages'];
+  for (const selector of containers) {
+    const scope = page.locator(selector).first();
+    if (!(await scope.count())) continue;
+
+    const emptySlot = scope.locator('.main-content.medium.dashed').first();
+    if (await emptySlot.count()) {
+      await emptySlot.scrollIntoViewIfNeeded().catch(() => {});
+      await sleep(600);
+      await emptySlot.click();
+      const opened = await waitUntil(() => pickerOpen(page), { timeoutMs: 8000, intervalMs: 300, minMs: 400 });
+      if (opened.ok) return true;
+    }
+
+    // 没有空槽：用 CDP 轨迹悬停第一个已填槽位，点菜单里的「替换」
+    const filled = scope.locator('.drag-item').first();
+    if (!(await filled.count())) continue;
+    await filled.scrollIntoViewIfNeeded().catch(() => {});
+    await sleep(600);
+    const box = await filled.boundingBox();
+    if (!box) continue;
+    const cx = Math.round(box.x + box.width / 2);
+    const cy = Math.round(box.y + box.height / 2);
+    for (const [x, y] of [[cx - 120, cy - 80], [cx - 40, cy - 20], [cx, cy], [cx + 2, cy + 1], [cx, cy]]) {
+      await client.send('Input.dispatchMouseEvent', { type: 'mouseMoved', x, y, buttons: 0, pointerType: 'mouse' });
+      await sleep(110);
+    }
+    await sleep(2000);
+    const replace = page.locator('li.next-menu-item').filter({ hasText: /^替换$/ }).first();
+    if (await replace.count()) {
+      await replace.click();
+      const opened = await waitUntil(() => pickerOpen(page), { timeoutMs: 8000, intervalMs: 300, minMs: 400 });
+      if (opened.ok) return true;
+    }
+  }
+  return false;
+}
+
+async function main() {
+  const dir = getArg('dir');
+  if (!dir) {
+    console.error('用法: node bulk-upload-assets.js --dir <产品图片目录> [--limit N]');
+    process.exit(1);
+  }
+  const root = path.resolve(dir);
+  if (!fs.existsSync(root)) {
+    console.error('找不到目录: ' + root);
+    process.exit(1);
+  }
+
+  let files = fs
+    .readdirSync(root)
+    .filter((name) => IMAGE_EXT.test(name))
+    .filter((name) => !SKIP_PREFIX.some((prefix) => name.startsWith(prefix)))
+    .map((name) => path.join(root, name));
+  const limit = Number(getArg('limit') || 0);
+  if (limit > 0) files = files.slice(0, limit);
+
+  if (!files.length) {
+    console.error('目录里没有可上传的图（已排除「删除*」）');
+    process.exit(1);
+  }
+
+  const outRoot = path.resolve(getArg('out') || path.join(process.cwd(), '_listing-work'));
+  const outDir = path.join(outRoot, 'bulk-' + new Date().toISOString().replace(/[:.]/g, '-'));
+  ensureDir(outDir);
+
+  const { context } = await connect();
+  const page = context.pages().find((p) => p.url().includes('publish.htm'));
+  if (!page) {
+    console.error('没找到发布页');
+    process.exit(1);
+  }
+  await page.bringToFront().catch(() => {});
+  await page.keyboard.press('Escape').catch(() => {});
+  await sleep(1500);
+
+  const client = await page.context().newCDPSession(page);
+  console.log('打开图片选择器…');
+  if (!(await openImageSelector(page, client))) {
+    console.error('没能打开素材中心（图片选择器）');
+    process.exit(1);
+  }
+
+  let frame = page.frames().find((f) => f.url().includes(SELECTOR_IFRAME));
+
+  // 弹窗出现不代表 iframe 内容渲染好了。不等这一步，下面找「全部图片」会找不到，
+  // 上传就会落到「复制宝贝」自动建的目录里（实测踩过）。
+  const contentReady = await waitForPickerContent(page, { timeoutMs: 8000 });
+  console.log('   素材中心内容就绪用了 ' + contentReady.ms + ' ms' + (contentReady.ok ? '' : '（超时）'));
+  frame = page.frames().find((f) => f.url().includes(SELECTOR_IFRAME)) || frame;
+
+  // 先切到「全部图片」根目录：不切的话会落在「复制宝贝」自动建的目录里，
+  // 后面按名字挑图就找不到（这个坑今天踩了两次）。
+  const allImages = frame.locator('text=全部图片').first();
+  if (await allImages.count()) {
+    await allImages.click().catch(() => {});
+    await sleep(3000);
+    console.log('已切到「全部图片」目录');
+    frame = page.frames().find((f) => f.url().includes(SELECTOR_IFRAME)) || frame;
+  }
+
+  console.log('一次性投递 ' + files.length + ' 个文件:');
+  files.forEach((f) => console.log('    ' + path.basename(f)));
+
+  // ── 关键：先挂监听，再点任何东西 ─────────────────────────────
+  // 只要页面上有 filechooser 监听在，Playwright 就会**拦住**系统文件框；
+  // 没有监听的时候点「本地上传」，Windows 的「打开」对话框会真的弹到桌面上、
+  // 而且不会自己关掉——就是截图里那个一直挂着的窗口。
+  let pendingChooser = null;
+  const grabChooser = (c) => {
+    if (!pendingChooser) pendingChooser = c;
+  };
+  page.on('filechooser', grabChooser);
+
+  let chooser = null;
+  const localUpload = frame.locator('button:has-text("本地上传")').first();
+  if (await localUpload.count()) {
+    await localUpload.click();
+    // 有的版本点「本地上传」直接弹文件框，有的只是展开上传区，等 3 秒看是哪种
+    for (let i = 0; i < 12 && !pendingChooser; i++) await sleep(250);
+    if (pendingChooser) {
+      console.log('   「本地上传」直接触发了文件框（已被拦截，不再点上传区）');
+      chooser = pendingChooser;
+    }
+  }
+
+  if (!chooser) {
+    await waitUntil(
+      () =>
+        frame
+          .evaluate(() => Boolean(document.querySelector('#sucai-tu-upload') || document.querySelector('input[type=file]')))
+          .catch(() => false),
+      { timeoutMs: 6000, intervalMs: 250, minMs: 400 }
+    );
+    const uploadArea = frame.locator('#sucai-tu-upload').first();
+    const clickTarget = (await uploadArea.count()) ? uploadArea : frame.locator('input[type=file]').first();
+    await clickTarget.click();
+    for (let i = 0; i < 40 && !pendingChooser; i++) await sleep(250);
+    chooser = pendingChooser;
+  }
+
+  page.off('filechooser', grabChooser);
+  if (!chooser) {
+    console.error('没能拿到文件选择器（上传入口没找到）');
+    process.exit(1);
+  }
+
+  // ── 上传完成的判断：听接口，不靠盲等 ──────────────────────────────
+  // 图片空间的上传链路（2026-09-22 抓包确认）：
+  //   POST https://stream-upload.taobao.com/api/upload.api  → 每个文件一个请求，
+  //        200 且响应体里有 object.fileId 才算这个文件被平台收下；
+  //   随后客户端轮询 GET .../api/collect_client_upload_rt.api?file_Id=... 做异步处理。
+  // 实测 3 张图 5 秒内就全部收下，而老写法按"每张 2.5 秒、至少 20 秒"硬等 52 秒，
+  // 21 张时白等 40 秒以上。改成：收齐 N 个 200 就立刻关面板。
+  const accepted = [];
+  const failed = [];
+  let successMarker = false;
+  const onResponse = async (res) => {
+    const u = res.url();
+    if (!u.includes('/api/upload.api')) return;
+    if (res.status() !== 200) {
+      failed.push(res.status());
+      return;
+    }
+    try {
+      const body = await res.text();
+      const m = body.match(/"fileId"\s*:\s*"?(\d+)/);
+      accepted.push(m ? m[1] : 'unknown');
+    } catch (e) {
+      accepted.push('unknown');
+    }
+  };
+  page.on('response', onResponse);
+
+  const t0 = Date.now();
+  await chooser.setFiles(files);
+  console.log('已投递 ' + files.length + ' 个文件，按接口回执判断完成…');
+
+  const hardCapMs = Math.max(60000, files.length * 6000);
+  let waited = 0;
+  while (waited < hardCapMs) {
+    if (accepted.length + failed.length >= files.length) break;
+    await sleep(400);
+    waited += 400;
+    if (waited % 4000 === 0) {
+      console.log('    …已收 ' + (accepted.length + failed.length) + '/' + files.length + ' 个回执');
+    }
+  }
+  const acceptMs = Date.now() - t0;
+
+  // 面板上出现"上传成功"再收尾；最多再等 8 秒，等不到也继续（接口已经回执了）。
+  frame = page.frames().find((f) => f.url().includes(SELECTOR_IFRAME)) || frame;
+  for (let i = 0; i < 20; i++) {
+    successMarker = await frame
+      .evaluate(() =>
+        /上传成功|上传完成|\d+\s*\/\s*\d+/.test(document.body ? document.body.innerText : '')
+      )
+      .catch(() => false);
+    if (successMarker) break;
+    await sleep(400);
+  }
+  const totalMs = Date.now() - t0;
+  const oldWaitMs = Math.max(20000, files.length * 2500);
+  console.log(
+    '   平台回执 ' + accepted.length + '/' + files.length + ' 个，用时 ' + acceptMs + ' ms' +
+      (failed.length ? '，失败 ' + failed.length + ' 个' : '') +
+      '；旧写法要等 ' + oldWaitMs + ' ms'
+  );
+  page.off('response', onResponse);
+
+  if (accepted.length < files.length) {
+    console.log('⚠️ 没有收齐回执（' + accepted.length + '/' + files.length + '），继续按老逻辑再等一会儿');
+    await sleep(8000);
+  }
+
+  const waitMs = oldWaitMs;
+
+  // 【关键】上传完必须点「完成」把上传面板收掉。
+  // 不关的话，面板会一直盖在上面（还有"N 个文件上传成功"的提示），
+  // 后面的选图就会被这层挡住、点不动或点错 —— 这个 bug 之前没修。
+  frame = page.frames().find((f) => f.url().includes(SELECTOR_IFRAME)) || frame;
+  const doneBtn = frame.locator('button:has-text("完成")').first();
+  if (await doneBtn.count()) {
+    await doneBtn.click().catch(() => {});
+    console.log('已点「完成」关掉上传面板');
+    // 等上传面板收掉（老写法固定 5 秒）
+    await waitUntil(
+      () => frame.evaluate(() => !/拖拽\/粘贴|点击\s+上传文件/.test(document.body ? document.body.innerText : '')).catch(() => false),
+      { timeoutMs: 5000, intervalMs: 300, minMs: 800 }
+    );
+  } else {
+    console.log('⚠️ 没找到「完成」按钮，上传面板可能还开着');
+  }
+
+  // 再把「选择图片」弹窗整体关掉，让下一个脚本从干净状态开始。
+  // 光按 Escape 不行（焦点在 iframe 里，弹窗没反应）——要先点一下页面空白处把焦点移出来。
+  // 不关的话，这层会盖住整个页面，下一步点标题/槽位都会被"intercepts pointer events"挡住。
+  await page.mouse.click(120, 300).catch(() => {});
+  await sleep(800);
+  await page.keyboard.press('Escape').catch(() => {});
+  await sleep(2000);
+  const leftovers = await page
+    .evaluate(() => document.querySelectorAll('.next-overlay-wrapper.opened').length)
+    .catch(() => 0);
+  if (leftovers) {
+    console.log('⚠️ 还有 ' + leftovers + ' 个浮层没关掉');
+  } else {
+    console.log('弹窗已全部关闭');
+  }
+
+  frame = page.frames().find((f) => f.url().includes(SELECTOR_IFRAME));
+  const summary = frame
+    ? await frame.evaluate(() => {
+        const names = Array.from(document.querySelectorAll('label.next-checkbox-wrapper')).map((el) => {
+          let node = el;
+          let best = '';
+          for (let d = 0; d < 5 && node; d++) {
+            const t = (node.innerText || '').replace(/\s+/g, ' ').trim();
+            if (t.length > best.length && t.length < 120) best = t;
+            node = node.parentElement;
+          }
+          return (best.match(/^[^\s]+\.(jpg|jpeg|png|webp|bmp|gif)/i) || [])[0] || '';
+        }).filter(Boolean);
+        return { cardCount: names.length, topNames: names.slice(0, 12) };
+      })
+    : { cardCount: 0, topNames: [] };
+
+  const risk = await detectRiskSignals(page);
+  const shot = await screenshot(page, outDir, 'after-bulk-upload');
+  fs.writeFileSync(
+    path.join(outDir, 'bulk-upload-report.json'),
+    JSON.stringify(
+      {
+        dir: root,
+        fileCount: files.length,
+        accepted: accepted.length,
+        failedResponses: failed.length,
+        acceptMs,
+        totalMs,
+        successMarkerSeen: successMarker,
+        oldWaitMs: waitMs,
+        summary,
+        risk,
+        screenshot: shot,
+      },
+      null,
+      2
+    ),
+    'utf8'
+  );
+
+  console.log('');
+  console.log('素材中心现有卡片: ' + summary.cardCount + ' 个');
+  console.log('最新几张: ' + JSON.stringify(summary.topNames, null, 1));
+  if (risk.length) console.log('风控信号: ' + risk.map((r) => r.id).join(', '));
+  console.log('截图: ' + shot);
+  console.log('');
+  console.log('请核对上面"最新几张"里有没有你刚投的图。');
+  console.log('=== 只上传到图片空间，没有填任何槽位、没有提交。 ===');
+
+  await page.keyboard.press('Escape').catch(() => {});
+  process.exit(0);
+}
+
+main().catch((err) => {
+  console.error('批量上传失败: ' + err.message);
+  process.exit(1);
+});

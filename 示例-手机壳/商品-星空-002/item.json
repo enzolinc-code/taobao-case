@@ -1,0 +1,14 @@
+{
+  "catId": "",
+  "title": "iPhone 15 星空壳",
+  "price": 45,
+  "stock": 100,
+  "axes": {
+    "适用机型": {
+      "fromRegistry": "机型清单.json",
+      "groups": ["不存在的分组"]
+    },
+    "颜色": ["深蓝"]
+  },
+  "mainImages": ["images/main-01.jpg"]
+}

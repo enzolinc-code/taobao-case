@@ -1,0 +1,102 @@
+{
+  "_说明": [
+    "类目 150704（3C数码配件>>手机配件>>手机保护套/壳）的选择器配置。",
+    "带 _待校准 的规则还没填真实选择器，跑 fill-listing 时会被记为跳过/待人工。",
+    "属性行的容器 ID 来自 dump-field-map.js 实测；容器内具体控件的选择器要用 probe 输出补。"
+  ],
+  "catId": "150704",
+  "publishUrl": "https://item.upload.taobao.com/sell/v2/publish.htm?catId=150704&fromAICategory=true",
+  "submitText": "提交宝贝信息",
+  "limits": {
+    "_来源": "实测：宝贝标题占位符原文「最多允许输入50个汉字（100字符）」",
+    "titleChars": 100,
+    "maxSkuRows": null
+  },
+
+  "rules": [
+    {
+      "key": "title",
+      "strategy": "type",
+      "selector": ".sell-component-tbtitle-input input",
+      "index": 0,
+      "_说明": "页面上有两个同选择器的输入框：index 0 是宝贝标题，index 1 是导购标题（30 字符）"
+    },
+
+    {
+      "key": "attributes.品牌",
+      "strategy": "choose",
+      "selector": "#struct-p-20000 input",
+      "_容器": "sell-field-p-20000",
+      "_必填": true
+    },
+    {
+      "key": "attributes.型号",
+      "strategy": "type",
+      "selector": "#struct-p-20000~1 input",
+      "_容器": "sell-field-p-20000~1",
+      "_必填": true
+    },
+    {
+      "key": "attributes.风格",
+      "strategy": "choose",
+      "selector": "#struct-p-20608 input",
+      "_容器": "sell-field-p-20608",
+      "_必填": true
+    },
+    {
+      "key": "attributes.流行元素",
+      "strategy": "choose",
+      "selector": "#struct-p-231100582 input",
+      "_容器": "sell-field-p-231100582",
+      "_必填": true
+    },
+    {
+      "key": "attributes.保护套质地",
+      "strategy": "choose",
+      "selector": "#struct-p-20021 input",
+      "_容器": "sell-field-p-20021"
+    },
+    {
+      "key": "attributes.工艺技术",
+      "strategy": "choose",
+      "selector": "#struct-p-557317827 input",
+      "_容器": "sell-field-p-557317827"
+    },
+    {
+      "key": "attributes.款式",
+      "strategy": "choose",
+      "selector": "#struct-p-122276315 input",
+      "_容器": "sell-field-p-122276315"
+    },
+    {
+      "key": "attributes.环保认证",
+      "strategy": "choose",
+      "selector": "#struct-p-557273497 input",
+      "_容器": "sell-field-p-557273497"
+    },
+    {
+      "key": "attributes.定制服务",
+      "strategy": "choose",
+      "selector": "#struct-p-557317826 input",
+      "_容器": "sell-field-p-557317826"
+    },
+    {
+      "key": "attributes.适用手机机型",
+      "strategy": "manual",
+      "_容器": "sell-field-p-28102",
+      "note": "待校准：这个属性和 SKU 轴的取值可能联动，先交人工"
+    },
+
+    {
+      "key": "skus",
+      "strategy": "manual",
+      "note": "SKU 不走 DOM 填写，改用 export-sku-rows.js + build-sku-excel.py 生成 Excel，再走页面「批量导入→模板上传」"
+    }
+  ],
+
+  "sku": {
+    "_说明": "SKU 表通过 Excel 模板导入，不需要逐个单元格填。这里留空。",
+    "axes": {},
+    "table": {}
+  }
+}

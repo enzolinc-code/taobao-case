@@ -1,0 +1,55 @@
+{
+  "_用法": "一个商品一个文件夹：item.json + images/。复制本文件改名 item.json，按注释填，方括号里的说明填完删掉。",
+  "_取值": "attributes 里的值必须是平台原词，先从 probe-publish-page.js 的输出里抄，不要写近义词。",
+
+  "catId": "[手机壳类目ID，用 probe 测出来后填]",
+  "title": "适用于iPhone 15 Pro手机壳 磨砂防摔 全包镜头保护 [品牌词必须带'适用于']",
+  "price": 39.9,
+  "stock": 500,
+  "outerId": "[自己的货号，选填；批量重跑时靠它去重]",
+  "outerIdPattern": "{prefix}-{适用机型.code}-{颜色.code}",
+
+  "attributes": {
+    "_说明": "手机壳的必填属性以 probe 实测为准。下面只是骨架，键名要换成页面上的实际属性名。",
+    "品牌": "其他/other",
+    "款式": "[实测后填]",
+    "材质": "[实测后填]",
+    "上市年份季节": "[实测后填]"
+  },
+
+  "axes": {
+    "_说明": "两种写法都行：直接给数组，或引用全店共用的机型清单（推荐）。机型清单见 references/model-list.md。",
+    "适用机型": {
+      "fromRegistry": "机型清单.json",
+      "axis": "适用机型",
+      "groups": ["苹果", "华为"]
+    },
+    "颜色": ["黑色磨砂", "透明白", "深蓝"]
+  },
+
+  "skus": [
+    {
+      "_说明": "需要给单个 SKU 单独定价/定量时，改用这个数组；不需要就删掉，让脚本按 axes 展开。",
+      "适用机型": "iPhone 15 Pro",
+      "颜色": "黑色磨砂",
+      "price": 39.9,
+      "stock": 200,
+      "outerId": "PC-15P-BLK"
+    }
+  ],
+
+  "mainImages": ["images/main-01.jpg", "images/main-02.jpg"],
+  "optionImages": {
+    "_说明": "颜色选项图，按颜色值给一张。没有就删掉这个字段。",
+    "黑色磨砂": "images/color-black.jpg"
+  },
+  "detailImages": ["images/detail-01.jpg"],
+
+  "logistics": {
+    "freightTemplate": "[运费模板名称，必须是店铺里已存在的]",
+    "deliveryTime": "48小时内发货",
+    "publishTiming": "放入仓库"
+  },
+
+  "notes": "[选填：这款的卖点、要人工确认的事项]"
+}
