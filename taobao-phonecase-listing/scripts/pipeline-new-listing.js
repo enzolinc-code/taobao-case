@@ -88,7 +88,12 @@ async function main() {
     //
     // 所以必须等 16 个回执全到齐再选图（此时新文件已在列表最前，按名字选中它）。
     // 个别场景想省几秒可手动调大/调小，但**不要在有同名文件的素材库里用**。
+    // --upload-1x1：走"上传 1:1 主图 + 手选"的老做法，**不调用**页面裁剪接口
+    // （imageCutUtil/autoCutImages —— 2026-09-23 触发平台风控的就是它）。
+    // 代价：多传 5 张、多开一次素材中心，每条约多 10–15 秒。被风控期间建议用它。
+    const useUpload1x1 = process.argv.includes('--upload-1x1');
     const upArgs = ['--dir', dir, '--keep-picker-open'];
+    if (useUpload1x1) upArgs.push('--with-1x1');
     const earlyIdx = process.argv.indexOf('--early-done-after');
     const early = earlyIdx > -1 && process.argv[earlyIdx + 1] != null ? process.argv[earlyIdx + 1] : '0';
     upArgs.push('--early-done-after', early);
@@ -102,8 +107,11 @@ async function main() {
   // 「从3:4主图裁剪」生成 —— 少传 5 张图、少开一次素材中心。
   // 想恢复"1:1 也上传并手选"，把 --group 改回 both 并去掉 --derive-main，
   // 上传步骤同时加 --with-1x1。
+  const useUpload1x1ForMain = process.argv.includes('--upload-1x1');
   steps.push(
-    runStep('3. 主图（填 3:4，再由 3:4 裁出 1:1）', 'fill-main-images.js', ['--dir', dir, '--group', 'main34', '--derive-main'])
+    useUpload1x1ForMain
+      ? runStep('3. 主图（1:1 + 3:4，各自上传手选；不走裁剪接口）', 'fill-main-images.js', ['--dir', dir, '--group', 'both'])
+      : runStep('3. 主图（填 3:4，再由 3:4 裁出 1:1）', 'fill-main-images.js', ['--dir', dir, '--group', 'main34', '--derive-main'])
   );
   steps.push(runStep('4. 换标题', 'set-listing-title.js', ['--item', itemPath]));
   steps.push(runStep('5. SKU 颜色图（一次多选）', 'fill-sku-color-images.js', ['--dir', dir]));

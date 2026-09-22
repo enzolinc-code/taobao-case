@@ -24,6 +24,8 @@ function parseArgs(argv) {
     out: '_listing-work',
     prefix: '商品-手机壳-',
     nums: [],
+    // 透传给 pipeline-new-listing.js 的额外参数（例如 --upload-1x1 走"不调裁剪接口"的安全路径）
+    passthrough: [],
   };
   for (let i = 0; i < argv.length; i++) {
     const a = argv[i];
@@ -31,6 +33,7 @@ function parseArgs(argv) {
     else if (a === '--base') out.base = argv[++i];
     else if (a === '--out') out.out = argv[++i];
     else if (a === '--prefix') out.prefix = argv[++i];
+    else if (a === '--upload-1x1') out.passthrough.push(a);
     else out.nums.push(a.replace(/^0+/, '').padStart(3, '0'));
   }
   return out;
@@ -75,6 +78,7 @@ function main() {
         '--copy-from', args.copyFrom,
         '--upload', '--submit',
         '--out', args.out,
+        ...args.passthrough,
       ],
       { cwd: base, stdio: 'inherit' }
     );

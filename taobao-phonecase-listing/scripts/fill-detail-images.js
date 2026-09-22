@@ -103,9 +103,35 @@ async function selectImagesByName(page, baseNames) {
 
   const picked = [];
   const missing = [];
-  // 【效率】老写法：每张图都从列表头扫一遍，每个候选跟浏览器来回一次，
-  // 8 张最多 320 次往返——实测"勾选 8 张"要 10.9 秒，其中大半耗在这。
-  // 改成一次把整列名字读回来本地比对；每次点击后重读，列表重排也不会选错。
+  // ── 按图片编号选，不按文件名（同主图那处的原因）──
+  // 素材库里同名文件很多，按名字取第一个匹配，列表顺序不可控，会选到别人的图。
+  const up = loadUploadedMap();
+  if (!up || up.size === 0) {
+    return { ok: false, reason: '没有可用的本次上传清单，无法按编号选图（拒绝按名字猜）', picked: [], missing: baseNames };
+  }
+
+  const findIndexByOid = (oid) =>
+    frame
+      .evaluate((target) => {
+        const imgs = [...document.querySelectorAll('img')];
+        const all = [...document.querySelectorAll('label.next-checkbox-wrapper')];
+        for (const img of imgs) {
+          if (!(img.src || '').includes(target)) continue;
+          let n = img;
+          for (let d = 0; d < 6 && n; d++) {
+            n = n.parentElement;
+            if (!n) break;
+            const cb = n.querySelector('label.next-checkbox-wrapper');
+            if (cb) {
+              const i = all.indexOf(cb);
+              if (i >= 0) return i;
+            }
+          }
+        }
+        return -1;
+      }, oid)
+      .catch(() => -1);
+
   const readLabels = () =>
     frame
       .evaluate(() => {
@@ -126,10 +152,14 @@ async function selectImagesByName(page, baseNames) {
       .catch(() => []);
 
   for (const name of baseNames) {
-    const labels = await readLabels();
-    const index = labels.findIndex((t) => t && t.includes(name));
+    const want = up.get(name);
+    if (!want) {
+      missing.push(name + '(清单里没有)');
+      continue;
+    }
+    const index = await findIndexByOid(want);
     if (index < 0) {
-      missing.push(name);
+      missing.push(name + '(编号 ' + want + ' 没找到)');
       continue;
     }
     const wrappers = frame.locator('label.next-checkbox-wrapper');
@@ -171,7 +201,13 @@ function loadUploadedMap() {
 
 async function verifyDetailAreOurs(page, baseNames) {
   const uploaded = loadUploadedMap();
-  if (!uploaded) return { checked: false, reason: '没有本次上传清单，跳过核对' };
+  // 清单缺失/为空时按失败处理（同主图那处，2026-09-23 教训：不能静默跳过）
+  if (!uploaded || uploaded.size === 0) {
+    return {
+      checked: true,
+      problems: ['没有可用的本次上传清单（last-upload.json 缺失或为空）——无法确认详情图是不是本次上传的，按失败处理'],
+    };
+  }
   const oids = await page
     .evaluate(() =>
       [...document.querySelectorAll('#panel_edit img')]

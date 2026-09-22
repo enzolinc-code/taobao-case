@@ -33,6 +33,15 @@ const MAIN34_SELECTOR = '#struct-threeToFourImages';
 
 const SELECTOR_IFRAME = 'sucai-selector-ng';
 
+// 关掉素材中心弹窗（先点页面空白把焦点移出 iframe，再 Escape）
+async function closePicker(page) {
+  await page.mouse.click(120, 300).catch(() => {});
+  await sleep(700);
+  await page.keyboard.press('Escape').catch(() => {});
+  await sleep(1200);
+  return !(await pickerOpen(page));
+}
+
 // 素材中心弹窗是否已经开着（上一步上传后用 --keep-picker-open 保留时会开着）
 function pickerOpen(page) {
   return page
@@ -82,7 +91,16 @@ async function readSlotOids(page, selector) {
 
 async function verifySlotsAreOurs(page, selector, expectedNames) {
   const up = loadUploadedMap();
-  if (!up) return { checked: false, reason: '没有本次上传清单，跳过核对' };
+  // ⚠️ 清单缺失/为空时必须**判定失败**，不能"跳过"。
+  // 2026-09-23 教训：105 那条上传回执异常（29/21）导致清单写成 0 个文件，
+  // 当时这里打印"跳过核对"就放行了 —— 又一次变成"看起来成功"。
+  // 核对是本流程唯一能发现"选到别人的同名旧文件"的手段，绝不能静默降级。
+  if (!up || up.map.size === 0) {
+    return {
+      checked: true,
+      problems: ['没有可用的本次上传清单（last-upload.json 缺失或为空）——无法确认选中的是不是本次上传的图，按失败处理'],
+    };
+  }
   const oids = await readSlotOids(page, selector);
   const problems = [];
   expectedNames.forEach((name, i) => {
@@ -184,10 +202,21 @@ async function selectManyByName(page, baseNames) {
   const picked = [];
   const missing = [];
 
-  // 【效率】老写法是"每张图都从头扫一遍列表"，每个候选都要跟浏览器来回一次，
-  // 5 张图最多 200 次往返，光这一项就吃掉十几秒。
-  // 改成一次把整列名字读回来，在本地比对。每次点击后重读一次，
-  // 所以列表即使重排也不会选错。
+  // ── 选图方式：**按图片编号（O1CN…）选，不按文件名 ──────────────────
+  // 素材库里每个设计都有同名的 主图_1.jpg / 主图3比4_05.jpg，
+  // 按名字选是"取第一个匹配"，列表顺序不可控 —— 2026-09-22/23 两次事故都是这么来的。
+  // 上传回执里有"文件名 → 图片编号"，素材中心每张缩略图的地址里也带编号，
+  // 所以改为：拿编号去找对应的那张卡片，**同名文件再多也不会选错**。
+  const up = loadUploadedMap();
+  if (!up || up.map.size === 0) {
+    return {
+      ok: false,
+      reason: '没有可用的本次上传清单，无法按编号选图（拒绝按名字猜）',
+      picked: [],
+      missing: baseNames,
+    };
+  }
+
   const readLabels = () =>
     frame
       .evaluate(() => {
@@ -207,22 +236,52 @@ async function selectManyByName(page, baseNames) {
       })
       .catch(() => []);
 
-  // 上一步可能是"边传边选"（只等够用的回执就关面板），剩下的文件还在后台上传。
-  // 所以先等这几个文件名都出现在列表里再开始勾选，避免误判"找不到"。
+  // 按编号找卡片：返回该编号对应卡片的复选框序号
+  const findIndexByOid = (oid) =>
+    frame
+      .evaluate((target) => {
+        const imgs = [...document.querySelectorAll('img')];
+        const all = [...document.querySelectorAll('label.next-checkbox-wrapper')];
+        for (const img of imgs) {
+          if (!(img.src || '').includes(target)) continue;
+          let n = img;
+          for (let d = 0; d < 6 && n; d++) {
+            n = n.parentElement;
+            if (!n) break;
+            const cb = n.querySelector('label.next-checkbox-wrapper');
+            if (cb) {
+              const i = all.indexOf(cb);
+              if (i >= 0) return i;
+            }
+          }
+        }
+        return -1;
+      }, oid)
+      .catch(() => -1);
+
+  // 等这几张"按编号"在列表里出现（上传可能还在后台跑）
   const waitAll = await waitUntil(
     async () => {
-      const labels = await readLabels();
-      return baseNames.every((n) => labels.some((t) => t && t.includes(n)));
+      for (const n of baseNames) {
+        const want = up.map.get(n);
+        if (!want) return false;
+        if ((await findIndexByOid(want)) < 0) return false;
+      }
+      return true;
     },
-    { timeoutMs: 15000, intervalMs: 600, minMs: 300 }
+    { timeoutMs: 20000, intervalMs: 600, minMs: 300 }
   );
-  console.log('    等全部文件名出现: ' + (waitAll.ok ? waitAll.ms + ' ms' : '超时（缺的会报出来）'));
+  console.log('    等本次上传的图按编号出现: ' + (waitAll.ok ? waitAll.ms + ' ms' : '超时（缺的会报出来）'));
 
   for (const name of baseNames) {
-    const labels = await readLabels();
-    const index = labels.findIndex((t) => t && t.includes(name));
+    const want = up.map.get(name);
+    if (!want) {
+      missing.push(name + '(清单里没有)');
+      continue;
+    }
+    const index = await findIndexByOid(want);
     if (index < 0) {
-      missing.push(name);
+      missing.push(name + '(编号 ' + want + ' 没在列表里找到)');
       continue;
     }
     const wrappers = frame.locator('label.next-checkbox-wrapper');
@@ -307,7 +366,11 @@ async function confirmSelection(page) {
   return { confirmed: false };
 }
 
-async function fillGroup(page, group, files, client) {
+// allowReuse：是否允许复用"上一步留下的、已经打开的"素材中心弹窗。
+// ⚠️ 弹窗是有归属的：从哪个槽位打开，选中的图就进哪一组。
+// 上传步骤是从 3:4 区域打开的，所以**只有 3:4 组能复用**；
+// 1:1 组如果直接复用，勾选会落到 3:4 上、1:1 全空（2026-09-23 实测踩过）。
+async function fillGroup(page, group, files, client, allowReuse = false) {
   const container = CONTAINERS[group];
   const scope = page.locator(container.selector).first();
   if (!(await scope.count())) return { ok: false, reason: '找不到容器 ' + container.selector };
@@ -322,10 +385,17 @@ async function fillGroup(page, group, files, client) {
 
   // 素材中心可能已经被上一步（批量上传）留着开在那里 —— 已开就直接用，
   // 省掉"关掉再打开"的一来一回。没开才去点空槽打开。
-  if (await pickerOpen(page)) {
+  if (allowReuse && (await pickerOpen(page))) {
     console.log('  素材中心已经开着（上一步留下的），直接用它选图');
-  } else if (!(await openPickerFromSlot(page, scope, client))) {
-    return { ok: false, reason: '点了空槽但「选择图片」弹窗没出现' };
+  } else {
+    // 有残留弹窗（但归属不对）就先关掉，再从本组空槽重新打开
+    if (await pickerOpen(page)) {
+      const closed = await closePicker(page);
+      console.log('  先关掉上一步留下的弹窗（归属不对），再从本组槽位打开: ' + (closed ? '已关闭' : '⚠️ 没关掉'));
+    }
+    if (!(await openPickerFromSlot(page, scope, client))) {
+      return { ok: false, reason: '点了空槽但「选择图片」弹窗没出现' };
+    }
   }
   // 弹窗出现 ≠ iframe 内容加载完，等「本地上传/全部图片」出现再往下走
   const contentReady = await waitForPickerContent(page, { timeoutMs: 8000 });
@@ -420,7 +490,8 @@ async function main() {
   const results = [];
   for (const [name, files] of targets) {
     console.log('=== ' + CONTAINERS[name].label);
-    const result = await fillGroup(page, name, files, client);
+    // 只有 3:4 组能复用上传步骤留下的弹窗（它就是从 3:4 打开的）
+    const result = await fillGroup(page, name, files, client, name === 'main34');
     console.log('  → ' + (result.ok ? '成功' : '失败: ' + result.reason) + '  ' + JSON.stringify(result.after || {}));
     results.push({ group: name, ...result });
     if (!result.ok) break;
