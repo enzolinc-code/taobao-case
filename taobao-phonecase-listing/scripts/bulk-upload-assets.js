@@ -264,6 +264,14 @@ async function main() {
   let waited = 0;
   while (waited < hardCapMs) {
     if (accepted.length + failed.length >= needCount) break;
+    // 【必须有】一收到"被风控拒绝"的回执就立刻停，不再干等。
+    // 再等下去也不会变成功（请求根本没进素材库），而从第一个被拒到现在已经白等了 2 分钟。
+    // 2026-09-23：两次事故都是在这个窗口里"等不到回执"却继续往下走的。
+    if (rejected.length) {
+      console.log('   ⛔ 收到被平台拒绝的回执，立刻停止等待（不再干等剩下 ' +
+        (files.length - accepted.length - failed.length) + ' 个）');
+      break;
+    }
     await sleep(400);
     waited += 400;
     if (waited % 4000 === 0) {

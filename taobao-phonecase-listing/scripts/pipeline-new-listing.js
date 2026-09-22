@@ -97,7 +97,21 @@ async function main() {
     const earlyIdx = process.argv.indexOf('--early-done-after');
     const early = earlyIdx > -1 && process.argv[earlyIdx + 1] != null ? process.argv[earlyIdx + 1] : '0';
     upArgs.push('--early-done-after', early);
-    steps.push(runStep('2. 素材批量上传到「全部图片」', 'bulk-upload-assets.js', upArgs));
+    const uploadStep = runStep('2. 素材批量上传到「全部图片」', 'bulk-upload-assets.js', upArgs);
+    steps.push(uploadStep);
+    // 【安全闸】上传这一步没成功就立刻停整条流程。
+    // 原因：往下的每一步（主图/SKU 图/详情图/白底图）都是"按文件名去素材库里挑"，
+    // 而素材库里有大量同名文件。上传没成功时挑到的会是别人更早的同名旧图 ——
+    // 2026-09-22（062–064 第 5 张主图）和 2026-09-23（104/105）两次事故都是这么造成的。
+    // 宁可停下来，也不要带着错图往下走。
+    if (!uploadStep.ok) {
+      console.log('');
+      console.log('══════ 已中止流程（不继续填图）');
+      console.log('  素材上传没有成功，失败原因见上一步的输出。');
+      console.log('  继续往下会按文件名挑图，上传失败时会挑到别人的同名旧图。');
+      console.log('  处理方式：先让上传恢复正常（例如在受控浏览器里过一次人机验证），再用同一条命令重跑。');
+      process.exit(2);
+    }
   }
   // 顺序说明：素材刚传完就紧接着做主图 —— 此时素材中心是热的、弹窗状态最干净，
   // 主图又是最不能出错的一项，先做完再处理标题等次要字段。
