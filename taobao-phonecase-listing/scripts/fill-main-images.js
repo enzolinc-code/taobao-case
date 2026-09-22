@@ -12,6 +12,7 @@ const path = require('path');
 const {
   connect,
   sleep,
+  waitUntil,
   waitForPickerContent,
   switchToAllImages,
   screenshot,
@@ -30,6 +31,17 @@ const MAIN_SELECTOR = '#struct-mainImagesGroup';
 const MAIN34_SELECTOR = '#struct-threeToFourImages';
 
 const SELECTOR_IFRAME = 'sucai-selector-ng';
+
+// 素材中心弹窗是否已经开着（上一步上传后用 --keep-picker-open 保留时会开着）
+function pickerOpen(page) {
+  return page
+    .evaluate(() =>
+      Array.from(document.querySelectorAll('.next-overlay-wrapper.opened')).some(
+        (o) => o.querySelector('iframe[src*="sucai-selector-ng"]') && o.getBoundingClientRect().width > 100
+      )
+    )
+    .catch(() => false);
+}
 
 // 点空槽打开素材中心。关键：iframe 是**常驻挂载**的，弹窗没开时它也在 DOM 里，
 // 所以不能"点了就往下走"——必须等主文档里真的出现弹窗，否则会去点隐藏的列表。
@@ -139,6 +151,17 @@ async function selectManyByName(page, baseNames) {
       })
       .catch(() => []);
 
+  // 上一步可能是"边传边选"（只等够用的回执就关面板），剩下的文件还在后台上传。
+  // 所以先等这几个文件名都出现在列表里再开始勾选，避免误判"找不到"。
+  const waitAll = await waitUntil(
+    async () => {
+      const labels = await readLabels();
+      return baseNames.every((n) => labels.some((t) => t && t.includes(n)));
+    },
+    { timeoutMs: 15000, intervalMs: 600, minMs: 300 }
+  );
+  console.log('    等全部文件名出现: ' + (waitAll.ok ? waitAll.ms + ' ms' : '超时（缺的会报出来）'));
+
   for (const name of baseNames) {
     const labels = await readLabels();
     const index = labels.findIndex((t) => t && t.includes(name));
@@ -241,8 +264,11 @@ async function fillGroup(page, group, files, client) {
   const baseNames = files.map((f) => path.basename(f).replace(/\.[^.]+$/, ''));
   console.log('  待填 ' + baseNames.length + ' 张: ' + baseNames.join(', '));
 
-  // 点第一个空槽 → 等弹窗真的出现
-  if (!(await openPickerFromSlot(page, scope, client))) {
+  // 素材中心可能已经被上一步（批量上传）留着开在那里 —— 已开就直接用，
+  // 省掉"关掉再打开"的一来一回。没开才去点空槽打开。
+  if (await pickerOpen(page)) {
+    console.log('  素材中心已经开着（上一步留下的），直接用它选图');
+  } else if (!(await openPickerFromSlot(page, scope, client))) {
     return { ok: false, reason: '点了空槽但「选择图片」弹窗没出现' };
   }
   // 弹窗出现 ≠ iframe 内容加载完，等「本地上传/全部图片」出现再往下走

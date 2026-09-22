@@ -77,7 +77,17 @@ async function main() {
   }
 
   if (process.argv.includes('--upload')) {
-    steps.push(runStep('2. 素材批量上传到「全部图片」', 'bulk-upload-assets.js', ['--dir', dir]));
+    // --keep-picker-open：上传完成后**不关素材中心**，交给下一步直接选 3:4 主图，
+    // 省掉"关弹窗 → 下一步再开弹窗"的一来一回（约 5 秒）。
+    // --early-done-after N：只等 N 个回执就先关面板去选图，剩下的文件在浏览器里继续传。
+    // 默认 6：文件按名字顺序上传（SKU×3 → 3:4×5 → 详情×8），拿到 6 个回执时
+    // 3:4 基本已在列表里；实测确实如此，且**关面板不会取消剩余上传**（16/16 都传完了）。
+    // 想关掉这个行为：--early-done-after 0。
+    const upArgs = ['--dir', dir, '--keep-picker-open'];
+    const earlyIdx = process.argv.indexOf('--early-done-after');
+    const early = earlyIdx > -1 && process.argv[earlyIdx + 1] != null ? process.argv[earlyIdx + 1] : '6';
+    upArgs.push('--early-done-after', early);
+    steps.push(runStep('2. 素材批量上传到「全部图片」', 'bulk-upload-assets.js', upArgs));
   }
   // 顺序说明：素材刚传完就紧接着做主图 —— 此时素材中心是热的、弹窗状态最干净，
   // 主图又是最不能出错的一项，先做完再处理标题等次要字段。

@@ -45,7 +45,9 @@ function pickerOpen(page) {
 
 async function openImageSelector(page, client) {
   // 优先用已有槽位：空槽直接点；满了就用悬停菜单里的「替换」
-  const containers = ['#struct-mainImagesGroup', '#struct-threeToFourImages'];
+  // 【2026-09-22】改成**优先从 3:4 主图区**打开：上传完这个弹窗不关，
+  // 下一步选 3:4 就直接在里面选，少一次「关弹窗→再开弹窗」。
+  const containers = ['#struct-threeToFourImages', '#struct-mainImagesGroup'];
   for (const selector of containers) {
     const scope = page.locator(selector).first();
     if (!(await scope.count())) continue;
@@ -223,10 +225,16 @@ async function main() {
   await chooser.setFiles(files);
   console.log('已投递 ' + files.length + ' 个文件，按接口回执判断完成…');
 
+  // 要等多少个回执才继续？默认等全部（files.length）。
+  // --early-done-after N：只等 N 个就先关面板去干别的（剩下的文件在浏览器里继续传）。
+  // 用途：3:4 主图是第 4–8 个传的，等它们到了就能先去选图，不必干等 16 个全传完。
+  const earlyArg = Number(getArg('early-done-after') || 0);
+  const needCount = earlyArg > 0 && earlyArg < files.length ? earlyArg : files.length;
+
   const hardCapMs = Math.max(60000, files.length * 6000);
   let waited = 0;
   while (waited < hardCapMs) {
-    if (accepted.length + failed.length >= files.length) break;
+    if (accepted.length + failed.length >= needCount) break;
     await sleep(400);
     waited += 400;
     if (waited % 4000 === 0) {
@@ -234,17 +242,23 @@ async function main() {
     }
   }
   const acceptMs = Date.now() - t0;
+  if (needCount < files.length) {
+    console.log('   已收 ' + (accepted.length + failed.length) + ' 个回执（够用），先关面板去选图；剩下的在浏览器里继续传');
+  }
 
   // 面板上出现"上传成功"再收尾；最多再等 8 秒，等不到也继续（接口已经回执了）。
+  // 但"边传边选"模式下不等这一步 —— 目的就是别再干等，剩下的交给浏览器。
   frame = page.frames().find((f) => f.url().includes(SELECTOR_IFRAME)) || frame;
-  for (let i = 0; i < 20; i++) {
-    successMarker = await frame
-      .evaluate(() =>
-        /上传成功|上传完成|\d+\s*\/\s*\d+/.test(document.body ? document.body.innerText : '')
-      )
-      .catch(() => false);
-    if (successMarker) break;
-    await sleep(400);
+  if (needCount >= files.length) {
+    for (let i = 0; i < 20; i++) {
+      successMarker = await frame
+        .evaluate(() =>
+          /上传成功|上传完成|\d+\s*\/\s*\d+/.test(document.body ? document.body.innerText : '')
+        )
+        .catch(() => false);
+      if (successMarker) break;
+      await sleep(400);
+    }
   }
   const totalMs = Date.now() - t0;
   const oldWaitMs = Math.max(20000, files.length * 2500);
@@ -255,7 +269,7 @@ async function main() {
   );
   page.off('response', onResponse);
 
-  if (accepted.length < files.length) {
+  if (needCount >= files.length && accepted.length < files.length) {
     console.log('⚠️ 没有收齐回执（' + accepted.length + '/' + files.length + '），继续按老逻辑再等一会儿');
     await sleep(8000);
   }
@@ -279,20 +293,29 @@ async function main() {
     console.log('⚠️ 没找到「完成」按钮，上传面板可能还开着');
   }
 
-  // 再把「选择图片」弹窗整体关掉，让下一个脚本从干净状态开始。
-  // 光按 Escape 不行（焦点在 iframe 里，弹窗没反应）——要先点一下页面空白处把焦点移出来。
-  // 不关的话，这层会盖住整个页面，下一步点标题/槽位都会被"intercepts pointer events"挡住。
-  await page.mouse.click(120, 300).catch(() => {});
-  await sleep(800);
-  await page.keyboard.press('Escape').catch(() => {});
-  await sleep(2000);
-  const leftovers = await page
-    .evaluate(() => document.querySelectorAll('.next-overlay-wrapper.opened').length)
-    .catch(() => 0);
-  if (leftovers) {
-    console.log('⚠️ 还有 ' + leftovers + ' 个浮层没关掉');
+  // 弹窗关不关，分两种情况：
+  //
+  // --keep-picker-open：**保持素材中心开着**，交给下一步（选 3:4 主图）直接在里面选。
+  //   这样就省掉了"关弹窗 → 下一步再开弹窗"这一来一回（实测每次约 5 秒）。
+  //
+  // 默认：整个关掉，让下一个脚本从干净状态开始。
+  //   光按 Escape 不行（焦点在 iframe 里，弹窗没反应）——要先点一下页面空白处把焦点移出来。
+  //   不关的话，这层会盖住整个页面，下一步点标题/槽位都会被"intercepts pointer events"挡住。
+  if (process.argv.includes('--keep-picker-open')) {
+    console.log('已按 --keep-picker-open 保持素材中心开着，交给下一步选图');
   } else {
-    console.log('弹窗已全部关闭');
+    await page.mouse.click(120, 300).catch(() => {});
+    await sleep(800);
+    await page.keyboard.press('Escape').catch(() => {});
+    await sleep(2000);
+    const leftovers = await page
+      .evaluate(() => document.querySelectorAll('.next-overlay-wrapper.opened').length)
+      .catch(() => 0);
+    if (leftovers) {
+      console.log('⚠️ 还有 ' + leftovers + ' 个浮层没关掉');
+    } else {
+      console.log('弹窗已全部关闭');
+    }
   }
 
   frame = page.frames().find((f) => f.url().includes(SELECTOR_IFRAME));
