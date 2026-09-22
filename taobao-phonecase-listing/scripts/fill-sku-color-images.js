@@ -57,6 +57,24 @@ function colorUploadEntryReady(page) {
     .catch(() => false);
 }
 
+// 关闭 SKU 抽屉。**失败退出前必须调**：抽屉是页面级浮层，
+// 留着不关会把后面详情图那步的点击全部挡住（实测报 sku-decouple-drawer-footer intercepts pointer events）。
+async function closeDrawer(page) {
+  await page.mouse.click(120, 300).catch(() => {});
+  await sleep(700);
+  await page.keyboard.press('Escape').catch(() => {});
+  await sleep(1200);
+  if (await drawerOpenNow(page)) {
+    await page.mouse.click(120, 300).catch(() => {});
+    await sleep(500);
+    await page.keyboard.press('Escape').catch(() => {});
+    await sleep(1200);
+  }
+  const still = await drawerOpenNow(page);
+  console.log('   收尾：关闭 SKU 抽屉 ' + (still ? '❌ 没关掉' : '✅ 已关闭'));
+  return !still;
+}
+
 async function cdpClickAt(client, x, y) {
   await client.send('Input.dispatchMouseEvent', { type: 'mouseMoved', x: x - 30, y: y - 20, buttons: 0, pointerType: 'mouse' });
   await sleep(100);
@@ -248,9 +266,26 @@ async function main() {
     return { ok: true, wasChecked: header.className.includes('checked') };
   });
   console.log('启用颜色图模式（勾选 header 复选框）: ' + JSON.stringify(toggled));
-  // 等颜色项的上传口出现（老写法固定等 3.5 秒）
-  const entryWait = await waitUntil(() => colorUploadEntryReady(page), { timeoutMs: 8000, intervalMs: 300, minMs: 400 });
-  console.log('   颜色项上传口就绪用了 ' + entryWait.ms + ' ms' + (entryWait.ok ? '' : '（超时，仍继续）'));
+  // 等颜色项的上传口出现。
+  // 原来只等 8 秒，实测偶发超时（平台慢的时候要 8 秒以上），于是这一步失败。
+  // 现在等 15 秒；还没出来就**再点一次那个复选框**（开关可能没生效）再等 10 秒。
+  let entryWait = await waitUntil(() => colorUploadEntryReady(page), { timeoutMs: 15000, intervalMs: 300, minMs: 400 });
+  if (!entryWait.ok) {
+    console.log('   等 15 秒还没出现，重新勾一次颜色图模式再等…');
+    await page.evaluate(() => {
+      const container = document.getElementById('struct-p-1627207');
+      const header = container && container.querySelector('.header .front-group label.next-checkbox-wrapper.pic');
+      const input = header && header.querySelector('input.next-checkbox-input');
+      if (input) {
+        input.click();
+        input.dispatchEvent(new Event('change', { bubbles: true }));
+      } else if (header) {
+        header.click();
+      }
+    }).catch(() => {});
+    entryWait = await waitUntil(() => colorUploadEntryReady(page), { timeoutMs: 10000, intervalMs: 300, minMs: 400 });
+  }
+  console.log('   颜色项上传口就绪用了 ' + entryWait.ms + ' ms' + (entryWait.ok ? '' : '（仍超时）'));
 
   if (dryRun) {
     console.log('（dry-run：只做到启用模式，不选图）');
@@ -263,6 +298,9 @@ async function main() {
   if (!(await uploadEntry.count())) {
     console.error('颜色项里没有 sell-color-option-image-upload（启用模式那步可能没生效）');
     console.log('截图: ' + (await screenshot(page, outDir, 'no-upload-entry', { always: true })));
+    // 【必须】失败退出前把抽屉关掉：不然这层浮层会挡住后面详情图那步的点击
+    //（实测症状：detail 步骤报 "sku-decouple-drawer-footer intercepts pointer events"）。
+    await closeDrawer(page);
     process.exit(1);
   }
   await uploadEntry.scrollIntoViewIfNeeded().catch(() => {});
@@ -297,11 +335,12 @@ async function main() {
 
   // 第 4 步：素材中心里一次勾选全部颜色图
   const picked = await pickImagesInMaterialCenter(page, baseNames);
-  console.log('选图结果: ' + JSON.stringify(picked));
-  if (!picked.picked.length) {
-    console.log('截图: ' + (await screenshot(page, outDir, 'pick-failed', { always: true })));
-    process.exit(1);
-  }
+      console.log('选图结果: ' + JSON.stringify(picked));
+      if (!picked.picked.length) {
+        console.log('截图: ' + (await screenshot(page, outDir, 'pick-failed', { always: true })));
+        await closeDrawer(page);
+        process.exit(1);
+      }
 
   // 第 5 步：确认创建
   const confirm = page.locator('div.next-drawer.next-drawer-right button').filter({ hasText: /确认创建/ }).first();
@@ -329,5 +368,14 @@ async function main() {
 
 main().catch((err) => {
   console.error('失败: ' + err.message);
-  process.exit(1);
+  // 任何未预期的异常也要把抽屉关掉，避免连累后续步骤
+  (async () => {
+    try {
+      const { context } = await connect();
+      const page = context.pages().find((p) => p.url().includes('publish.htm'));
+      if (page && (await drawerOpenNow(page))) await closeDrawer(page);
+    } catch (e) {
+      // 关不掉就算了，不要因为收尾再抛错
+    }
+  })().finally(() => process.exit(1));
 });

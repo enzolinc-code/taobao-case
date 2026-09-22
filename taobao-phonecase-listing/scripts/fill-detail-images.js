@@ -149,6 +149,48 @@ async function selectImagesByName(page, baseNames) {
   return { ok: missing.length === 0, picked, missing };
 }
 
+// ── 逐张核对（与主图同样目的）：详情图也是按名字选的，必须确认选中的是本次上传的文件 ──
+function loadUploadedMap() {
+  const candidates = [
+    path.resolve('_listing-work', 'last-upload.json'),
+    path.resolve(__dirname, '..', '..', '_listing-work', 'last-upload.json'),
+  ];
+  for (const f of candidates) {
+    if (!fs.existsSync(f)) continue;
+    try {
+      const j = JSON.parse(fs.readFileSync(f, 'utf8'));
+      const map = new Map();
+      for (const it of j.files || []) map.set(String(it.file).replace(/\.[^.]+$/, ''), it.oid);
+      if (map.size) return map;
+    } catch (e) {
+      // 读不动就当下没有
+    }
+  }
+  return null;
+}
+
+async function verifyDetailAreOurs(page, baseNames) {
+  const uploaded = loadUploadedMap();
+  if (!uploaded) return { checked: false, reason: '没有本次上传清单，跳过核对' };
+  const oids = await page
+    .evaluate(() =>
+      [...document.querySelectorAll('#panel_edit img')]
+        .map((i) => ((i.currentSrc || i.src || '').match(/(O1CN[A-Za-z0-9]+)/) || [])[1])
+        .filter(Boolean)
+    )
+    .catch(() => []);
+  const problems = [];
+  for (const n of baseNames) {
+    const want = uploaded.get(n);
+    if (!want) {
+      problems.push(n + ' 不在本次上传清单里');
+      continue;
+    }
+    if (!oids.includes(want)) problems.push(n + ' 的图（' + want + '）没有出现在详情里');
+  }
+  return { checked: true, problems };
+}
+
 async function confirmSelection(page) {
   for (let attempt = 0; attempt < 8; attempt++) {
     for (const scope of [page, ...page.frames()]) {
@@ -207,6 +249,19 @@ async function main() {
   await page.bringToFront().catch(() => {});
   await page.keyboard.press('Escape').catch(() => {});
   await sleep(1500);
+
+  // 上一步万一异常退出留下浮层（比如 SKU 抽屉），这里会挡住后面所有点击。
+  // 实测过：detail 步报 "sku-decouple-drawer-footer intercepts pointer events"。
+  const strayOverlays = await page
+    .evaluate(() => document.querySelectorAll('.next-overlay-wrapper.opened').length)
+    .catch(() => 0);
+  if (strayOverlays > 0) {
+    console.log('   检测到残留浮层 ' + strayOverlays + ' 个，先清掉再继续');
+    await page.mouse.click(120, 300).catch(() => {});
+    await sleep(700);
+    await page.keyboard.press('Escape').catch(() => {});
+    await sleep(1200);
+  }
 
   // 分段计时：这一步之前有"卡顿"的反馈，先把时间花在哪量出来再优化
   const tStart = Date.now();
@@ -270,6 +325,18 @@ async function main() {
   mark('确认+等详情刷新');
 
   const after = await readDetailState(page);
+
+  // 【硬校验】8 张详情图必须都是本次上传的那 8 个文件（防止命中同名旧图）
+  const verify = await verifyDetailAreOurs(page, baseNames);
+  if (!verify.checked) {
+    console.log('   ⚠️ 图源核对: ' + verify.reason);
+  } else if (verify.problems.length) {
+    console.log('   ❌ 图源核对不通过:');
+    verify.problems.forEach((p) => console.log('      - ' + p));
+  } else {
+    console.log('   ✅ 图源核对通过：' + baseNames.length + ' 张详情图都确认是本次上传的文件');
+  }
+
   const risk = await detectRiskSignals(page);
   const shot = await screenshot(page, outDir, 'after');
   fs.writeFileSync(
@@ -283,7 +350,7 @@ async function main() {
   if (risk.length) console.log('风控信号: ' + risk.map((r) => r.id).join(', '));
   console.log('截图: ' + shot);
   console.log('=== 未提交商品。 ===');
-  process.exit(after.images > 0 ? 0 : 1);
+  process.exit(after.images > 0 && (!verify.checked || verify.problems.length === 0) ? 0 : 1);
 }
 
 main().catch((err) => {

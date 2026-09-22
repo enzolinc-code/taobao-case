@@ -9,6 +9,7 @@
 // 用法: node fill-main-images.js --dir <产品图片目录> --group main|main34|both
 
 const path = require('path');
+const fs = require('fs');
 const {
   connect,
   sleep,
@@ -41,6 +42,61 @@ function pickerOpen(page) {
       )
     )
     .catch(() => false);
+}
+
+// ── 逐张核对：选中的图必须就是"本次刚上传"的那几张 ──────────────────
+// 背景：素材库里同名文件极多（每个设计都叫 主图3比4_05.jpg），按名字选图时
+// 只有"新文件排在最前"才选得对。2026-09-22 因为提前选图，命中别人的旧文件，
+// 导致 062–064 三条链接第 5 张主图错。这道核对就是为了拦住这类错误。
+function loadUploadedMap() {
+  const candidates = [
+    path.resolve('_listing-work', 'last-upload.json'),
+    path.resolve(__dirname, '..', '..', '_listing-work', 'last-upload.json'),
+  ];
+  for (const f of candidates) {
+    if (!fs.existsSync(f)) continue;
+    try {
+      const j = JSON.parse(fs.readFileSync(f, 'utf8'));
+      const map = new Map();
+      for (const it of j.files || []) map.set(String(it.file).replace(/\.[^.]+$/, ''), it.oid);
+      if (map.size) return { map, file: f, at: j.at };
+    } catch (e) {
+      // 读不动就当下没有
+    }
+  }
+  return null;
+}
+
+async function readSlotOids(page, selector) {
+  return page
+    .evaluate((sel) => {
+      const node = document.querySelector(sel);
+      if (!node) return [];
+      return [...node.querySelectorAll('.drag-item img')].map((img) => {
+        const m = (img.currentSrc || img.src || '').match(/(O1CN[A-Za-z0-9]+)/);
+        return m ? m[1] : null;
+      });
+    }, selector)
+    .catch(() => []);
+}
+
+async function verifySlotsAreOurs(page, selector, expectedNames) {
+  const up = loadUploadedMap();
+  if (!up) return { checked: false, reason: '没有本次上传清单，跳过核对' };
+  const oids = await readSlotOids(page, selector);
+  const problems = [];
+  expectedNames.forEach((name, i) => {
+    const want = up.map.get(name);
+    const got = oids[i] || null;
+    if (!want) {
+      problems.push(name + ' 不在本次上传清单里');
+      return;
+    }
+    if (got !== want) {
+      problems.push(name + ' 槽位是 ' + (got || '空') + '，应为本次上传的 ' + want);
+    }
+  });
+  return { checked: true, problems, oids };
 }
 
 // 点空槽打开素材中心。关键：iframe 是**常驻挂载**的，弹窗没开时它也在 DOM 里，
@@ -298,7 +354,33 @@ async function fillGroup(page, group, files, client) {
     console.log('  实时选中已生效，无需点「确定」');
   }
 
-  return { ok: after.empty === 0, before, after, selected, confirmed };
+  // 【硬校验】槽位里的图必须就是本次上传的那几张（按文件名一一对应）。
+  // 只有 1:1 是"由 3:4 裁剪生成"的时候跳过（那些图不是我们上传的，是页面生成的）。
+  let verify = { checked: false };
+  if (group === 'main34' || group === 'main') {
+    verify = await verifySlotsAreOurs(page, container.selector, baseNames);
+    if (!verify.checked) {
+      console.log('   ⚠️ 图源核对: ' + verify.reason);
+    } else if (verify.problems.length) {
+      console.log('   ❌ 图源核对不通过:');
+      verify.problems.forEach((p) => console.log('      - ' + p));
+    } else {
+      console.log('   ✅ 图源核对通过：' + baseNames.length + ' 张都确认是本次上传的文件');
+    }
+  }
+  if (verify.checked && verify.problems.length) {
+    return {
+      ok: false,
+      reason: '选中的图不是本次上传的（命中了同名旧文件）—— 必须停下，不能提交',
+      before,
+      after,
+      selected,
+      confirmed,
+      verify,
+    };
+  }
+
+  return { ok: after.empty === 0, before, after, selected, confirmed, verify };
 }
 
 async function main() {
@@ -358,6 +440,31 @@ async function main() {
   }
 
   const risk = await detectRiskSignals(page);
+
+  // 【必须】把素材中心弹窗关干净再退出。
+  // 上传那一步是"保留弹窗"（--keep-picker-open）交给这里复用的，
+  // 如果这里用完不关，后面 SKU 颜色图/详情图会被这层浮层挡住——
+  // 实测症状：SKU 那步找不到上传口、详情图报 "subtree intercepts pointer events"。
+  // 光按 Escape 无效（焦点在 iframe 里），要先点一下页面空白处把焦点移出来。
+  await page.mouse.click(120, 300).catch(() => {});
+  await sleep(800);
+  await page.keyboard.press('Escape').catch(() => {});
+  await sleep(1500);
+  const leftovers = await page
+    .evaluate(() => document.querySelectorAll('.next-overlay-wrapper.opened').length)
+    .catch(() => -1);
+  if (leftovers > 0) {
+    // 再补一次，尽量清干净
+    await page.mouse.click(120, 300).catch(() => {});
+    await sleep(500);
+    await page.keyboard.press('Escape').catch(() => {});
+    await sleep(1200);
+  }
+  const after2 = await page
+    .evaluate(() => document.querySelectorAll('.next-overlay-wrapper.opened').length)
+    .catch(() => -1);
+  console.log('收尾：关闭素材中心弹窗（剩余浮层 ' + after2 + '）');
+
   const shot = await screenshot(page, outDir, 'after');
   console.log('');
   if (risk.length) console.log('风控信号: ' + risk.map((r) => r.id).join(', '));

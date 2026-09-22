@@ -203,6 +203,10 @@ async function main() {
   // 21 张时白等 40 秒以上。改成：收齐 N 个 200 就立刻关面板。
   const accepted = [];
   const failed = [];
+  // 【硬校验用】把"这次刚上传的 文件名 → 图片编号(O1CN...)"记下来。
+  // 素材库里同名文件很多，后续按名字选图时必须核对选中的是不是"这次传的"，
+  // 否则可能命中别人的旧文件（2026-09-22 出过这个事故：062–064 第 5 张主图错）。
+  const uploaded = [];
   let successMarker = false;
   const onResponse = async (res) => {
     const u = res.url();
@@ -215,6 +219,9 @@ async function main() {
       const body = await res.text();
       const m = body.match(/"fileId"\s*:\s*"?(\d+)/);
       accepted.push(m ? m[1] : 'unknown');
+      const fn = (body.match(/"fileName"\s*:\s*"([^"]+)"/) || [])[1] || null;
+      const oid = (body.match(/(O1CN[A-Za-z0-9]+)/) || [])[1] || null;
+      if (fn && oid) uploaded.push({ file: fn, oid });
     } catch (e) {
       accepted.push('unknown');
     }
@@ -268,6 +275,15 @@ async function main() {
       '；旧写法要等 ' + oldWaitMs + ' ms'
   );
   page.off('response', onResponse);
+
+  // 落一份"本次上传清单"，给后面的选图步骤做逐张核对用
+  const uploadedFile = path.join(outRoot, 'last-upload.json');
+  fs.writeFileSync(
+    uploadedFile,
+    JSON.stringify({ dir: root, at: new Date().toISOString(), count: uploaded.length, files: uploaded }, null, 2),
+    'utf8'
+  );
+  console.log('   本次上传清单: ' + uploaded.length + ' 个文件 → ' + uploadedFile);
 
   if (needCount >= files.length && accepted.length < files.length) {
     console.log('⚠️ 没有收齐回执（' + accepted.length + '/' + files.length + '），继续按老逻辑再等一会儿');

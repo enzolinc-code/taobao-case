@@ -79,13 +79,18 @@ async function main() {
   if (process.argv.includes('--upload')) {
     // --keep-picker-open：上传完成后**不关素材中心**，交给下一步直接选 3:4 主图，
     // 省掉"关弹窗 → 下一步再开弹窗"的一来一回（约 5 秒）。
-    // --early-done-after N：只等 N 个回执就先关面板去选图，剩下的文件在浏览器里继续传。
-    // 默认 6：文件按名字顺序上传（SKU×3 → 3:4×5 → 详情×8），拿到 6 个回执时
-    // 3:4 基本已在列表里；实测确实如此，且**关面板不会取消剩余上传**（16/16 都传完了）。
-    // 想关掉这个行为：--early-done-after 0。
+    // ⚠️ --early-done-after 默认 0（等全部传完）—— 这是踩过坑之后的决定，别改回去：
+    //
+    // 曾经默认 6（只等 6 个回执就去选图，剩下的在后台继续传）。结果 **062/063/064 三条链接
+    // 的第 5 张主图全错**：素材库里有大量**同名**的 主图3比4_05.jpg（来自之前的设计），
+    // 我们新传的那张还没传完，按名字匹配时命中了别人的旧文件。
+    // 根因不是"关面板会取消上传"，而是**同名文件 + 提前选图**。
+    //
+    // 所以必须等 16 个回执全到齐再选图（此时新文件已在列表最前，按名字选中它）。
+    // 个别场景想省几秒可手动调大/调小，但**不要在有同名文件的素材库里用**。
     const upArgs = ['--dir', dir, '--keep-picker-open'];
     const earlyIdx = process.argv.indexOf('--early-done-after');
-    const early = earlyIdx > -1 && process.argv[earlyIdx + 1] != null ? process.argv[earlyIdx + 1] : '6';
+    const early = earlyIdx > -1 && process.argv[earlyIdx + 1] != null ? process.argv[earlyIdx + 1] : '0';
     upArgs.push('--early-done-after', early);
     steps.push(runStep('2. 素材批量上传到「全部图片」', 'bulk-upload-assets.js', upArgs));
   }
