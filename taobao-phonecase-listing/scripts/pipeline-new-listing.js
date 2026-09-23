@@ -17,6 +17,7 @@
 //   [--upload]  上传素材   [--submit]  填完并提交后关闭页面
 
 const path = require('path');
+const fs = require('fs');
 const { spawnSync } = require('child_process');
 const { connect, sleep, getArg } = require('./lib/browser');
 
@@ -124,6 +125,21 @@ async function main() {
       // 上传/填图会挂到这张空草稿上（2026-09-23 加的这条护栏）。
       if (copyPage) await copyPage.close().catch(() => {});
       process.exit(2);
+    }
+    // 【按条归档上传清单】last-upload.json 每跑一条就被覆盖，事后再想独立核对就没依据了
+    //（2026-09-24 踩过：当天想复核某条，清单已经被后面的探针覆盖，核对脚本只能报红）。
+    // 归档成 manifests/<配置目录名>.json，配合 verify-slots.js 可以随时逐张复核。
+    try {
+      const outRoot = path.resolve(getArg('out') || path.join(process.cwd(), '_listing-work'));
+      const manifestDir = path.join(outRoot, 'manifests');
+      fs.mkdirSync(manifestDir, { recursive: true });
+      fs.copyFileSync(
+        path.join(outRoot, 'last-upload.json'),
+        path.join(manifestDir, path.basename(path.dirname(itemPath)) + '.json')
+      );
+      console.log('已归档本次上传清单: ' + path.join('manifests', path.basename(path.dirname(itemPath)) + '.json'));
+    } catch (e) {
+      console.log('⚠️ 上传清单归档失败（不影响上架）: ' + e.message);
     }
   }
   // 顺序说明：素材刚传完就紧接着做主图 —— 此时素材中心是热的、弹窗状态最干净，
