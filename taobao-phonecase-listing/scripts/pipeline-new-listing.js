@@ -44,11 +44,20 @@ async function openCopyPage(sourceId) {
     encodeURIComponent(sourceId) +
     '&fromAIPublish=true';
   const { context } = await connect();
+  // 先看看桌面上有没有上一轮留下的发布页（旧草稿）。
+  const leftovers = context.pages().filter((p) => p.url().includes('publish.htm'));
+  if (leftovers.length) {
+    console.log('⚠️ 桌面上已有 ' + leftovers.length + ' 张旧发布页（上一轮的草稿）。');
+    console.log('   下面每一步都会认「最新打开的那张」= 本步骤刚开的这张，不会动旧草稿；');
+    console.log('   要清掉旧草稿可先跑 _listing-work/restart-pipeline.js。');
+  }
   const page = await context.newPage();
+  // 兜底指定：万一"最新"判断不可靠，子步骤会按这个 URL 片段挑页（认最后一张匹配的，也就是刚开的这张）。
+  process.env.TAOBAO_TARGET_PAGE_HINT = 'copyItem=true&itemId=' + encodeURIComponent(sourceId);
   await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 60000 });
   await sleep(9000);
   await page.bringToFront().catch(() => {});
-  return page.url();
+  return page;
 }
 
 async function main() {
@@ -65,13 +74,14 @@ async function main() {
   console.log('图片目录: ' + dir);
 
   const steps = [];
+  let copyPage = null;
 
   const copyFrom = getArg('copy-from');
   if (copyFrom) {
     console.log('');
     console.log('══════ 1. 发布相似品复制（源商品 ' + copyFrom + '）');
-    const url = await openCopyPage(copyFrom);
-    console.log('已打开: ' + url.slice(0, 100));
+    copyPage = await openCopyPage(copyFrom);
+    console.log('已打开: ' + copyPage.url().slice(0, 100));
     console.log('────── ✅ 完成');
     steps.push({ label: '复制页', ok: true, seconds: 0 });
   }
@@ -110,6 +120,9 @@ async function main() {
       console.log('  素材上传没有成功，失败原因见上一步的输出。');
       console.log('  继续往下会按文件名挑图，上传失败时会挑到别人的同名旧图。');
       console.log('  处理方式：先让上传恢复正常（例如在受控浏览器里过一次人机验证），再用同一条命令重跑。');
+      // 顺手把这一步开出来的草稿页关掉：留着它，下一轮"第一张发布页"就可能是它，
+      // 上传/填图会挂到这张空草稿上（2026-09-23 加的这条护栏）。
+      if (copyPage) await copyPage.close().catch(() => {});
       process.exit(2);
     }
   }

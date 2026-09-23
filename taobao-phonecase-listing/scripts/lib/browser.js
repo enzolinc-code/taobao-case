@@ -186,6 +186,25 @@ function isLoginUrl(url) {
   return LOGIN_HINTS.some((hint) => String(url || '').includes(hint));
 }
 
+// 【2026-09-23 起】挑发布页：优先环境变量指定的那一张，否则用**最近打开的那一张**。
+//
+// 为什么不用原来的"第一张"：流水线是「先开一张复制页，再在上面上传/填图」。
+// 如果上一轮失败后草稿页没关，桌面上就会有两张发布页，而"第一张"是**上一轮的旧草稿** ——
+// 上传、填图、提交全都会落到那张旧页面上，新页反而空着。
+// 2026-09-23 新加的"上传失败就中止"会留下这种旧页，所以必须改成认最新的那张。
+// 环境变量 TAOBAO_TARGET_PAGE_HINT（或调用方传 hint）用来在有多张时精确指定，
+// 例如流水线里用 'copyItem=true&itemId=1083698755183'。
+function findPublishPage(context, hint) {
+  const pages = context.pages().filter((p) => String(p.url()).includes('publish.htm'));
+  if (!pages.length) return undefined;
+  const want = hint || process.env.TAOBAO_TARGET_PAGE_HINT || '';
+  if (want) {
+    const hit = pages.filter((p) => String(p.url()).includes(want));
+    if (hit.length) return hit[hit.length - 1];
+  }
+  return pages[pages.length - 1];
+}
+
 async function openPublishPage(context, url) {
   const existing = context.pages().find((p) => p.url().includes('publish.htm'));
   if (existing) {
@@ -439,6 +458,7 @@ module.exports = {
   connect,
   publishUrl,
   isLoginUrl,
+  findPublishPage,
   openPublishPage,
   resolveFrame,
   realType,

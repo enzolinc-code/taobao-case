@@ -29,6 +29,7 @@ const {
   screenshot,
   ensureDir,
   getArg,
+  findPublishPage,
   detectRiskSignals,
 } = require('./lib/browser');
 const { loadAssets } = require('./load-listing-assets');
@@ -204,7 +205,7 @@ async function main() {
   ensureDir(outDir);
 
   const { context } = await connect();
-  const page = context.pages().find((p) => p.url().includes('publish.htm'));
+  const page = findPublishPage(context);
   if (!page) {
     console.error('没找到发布页');
     process.exit(1);
@@ -372,7 +373,7 @@ main().catch((err) => {
   (async () => {
     try {
       const { context } = await connect();
-      const page = context.pages().find((p) => p.url().includes('publish.htm'));
+      const page = findPublishPage(context);
       if (page && (await drawerOpenNow(page))) await closeDrawer(page);
     } catch (e) {
       // 关不掉就算了，不要因为收尾再抛错
