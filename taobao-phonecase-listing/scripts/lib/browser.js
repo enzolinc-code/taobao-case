@@ -122,9 +122,27 @@ async function isAllImagesFolder(page, frameUrlPart = 'sucai-selector-ng') {
 
 // 切到「全部图片」目录。已在的话直接返回（0 秒）；否则点一下并**等它真的变成选中态**，
 // 而不是盲等固定秒数。
+//
+// 【2026-09-24 修复】以前只靠"侧边栏「全部图片」有没有 next-selected 样式"判断是否已在根目录，
+// 结果踩坑：侧边栏把它标成选中，右侧内容区却停在别的目录（实测停在名为
+// `1087604504885-搜推` 的目录里），于是误判"本来就在"，后面按文件名挑图全部挑不到
+// （287、298 两条就是这样失败的，好在有"挑不到就不提交"的闸，没有发出残缺链接）。
+// 现在加了**内容校验**：右侧列表必须真的能看到我们上传的文件（主图_/主图3比4_/SKU_/详情图_），
+// 才认为"已在根目录"；否则强制点一次「全部图片」再等它加载出来。
+async function pickerShowsOurFiles(page, frameUrlPart = 'sucai-selector-ng') {
+  const frame = page.frames().find((f) => f.url().includes(frameUrlPart));
+  if (!frame) return false;
+  return frame
+    .evaluate(() => {
+      const txt = document.body ? document.body.innerText : '';
+      return /(主图3比4_\d|主图_\d|SKU_\d|详情图_\d)/.test(txt);
+    })
+    .catch(() => false);
+}
+
 async function switchToAllImages(page, options = {}) {
   const frameUrlPart = options.frameUrlPart || 'sucai-selector-ng';
-  if (await isAllImagesFolder(page, frameUrlPart)) {
+  if ((await isAllImagesFolder(page, frameUrlPart)) && (await pickerShowsOurFiles(page, frameUrlPart))) {
     return { ok: true, alreadyThere: true, ms: 0 };
   }
   const frame = page.frames().find((f) => f.url().includes(frameUrlPart));
@@ -134,12 +152,63 @@ async function switchToAllImages(page, options = {}) {
 
   const t0 = Date.now();
   await item.click().catch(() => {});
-  const r = await waitUntil(() => isAllImagesFolder(page, frameUrlPart), {
+  const r = await waitUntil(
+    async () =>
+      (await isAllImagesFolder(page, frameUrlPart)) && (await pickerShowsOurFiles(page, frameUrlPart)),
+    {
     timeoutMs: options.timeoutMs ?? 6000,
     intervalMs: 200,
     minMs: 300,
-  });
+    }
+  );
   return { ok: r.ok, switched: true, ms: Date.now() - t0 };
+}
+
+// 在素材中心的「搜索图片名称」框里输入关键词，把右侧列表过滤掉无关文件。
+//
+// 【为什么需要】2026-09-24：图片空间「全部图片」根目录被大量
+// `<商品ID>-搜推_NN_<时间>.jpg`（平台/工具生成的搜推图，单个商品一次 9 张）
+// 顶上来了，我们刚上传的 `主图_N/SKU_N/详情图_N` 被挤到列表后面，
+// 而"按文件名挑图"的逻辑只看列表前排，于是挑不到（287、298 两条因此失败）。
+// 搜索框支持按名称过滤，各填图步骤先搜一个能唯一圈定"我们这批文件名"的前缀
+// （主图_ / 主图3比4_ / SKU_ / 详情图_），污染再严重也不影响。
+async function searchPickerByName(page, keyword, options = {}) {
+  const frameUrlPart = options.frameUrlPart || 'sucai-selector-ng';
+  const frame = page.frames().find((f) => f.url().includes(frameUrlPart));
+  if (!frame) return { ok: false, reason: '素材中心没出现' };
+  const box = frame
+    .locator('input[placeholder="搜索图片名称"], input[placeholder*="搜索图片"]')
+    .first();
+  if (!(await box.count())) return { ok: false, reason: '没找到搜索框' };
+  const t0 = Date.now();
+  await box.click().catch(() => {});
+  await box.fill('').catch(() => {});
+  await box.type(keyword, { delay: 60 }).catch(() => {});
+  await page.keyboard.press('Enter').catch(() => {});
+  // 等结果刷新：等到"能看见含关键词的文件名"或超时
+  const r = await waitUntil(
+    () =>
+      frame
+        .evaluate((kw) => {
+          const txt = document.body ? document.body.innerText : '';
+          return txt.includes(kw);
+        }, keyword)
+        .catch(() => false),
+    { timeoutMs: options.timeoutMs ?? 8000, intervalMs: 300, minMs: 800 }
+  );
+  return { ok: r.ok, keyword, ms: Date.now() - t0 };
+}
+
+// 从"要挑的文件名"推一个能圈住这批文件的搜索关键词。
+// 例：['主图_1','主图_2'] → '主图_'（注意不会误配 主图3比4_01，因为不含"主图_"子串）；
+//     ['主图3比4_01',...] → '主图3比4_'；['SKU_1_全包精孔软壳'] → 'SKU_'；['详情图_1',...] → '详情图_'。
+function searchKeywordFor(names) {
+  const n0 = String((names && names[0]) || '');
+  if (n0.startsWith('主图3比4')) return '主图3比4_';
+  if (n0.startsWith('主图')) return '主图_';
+  if (n0.startsWith('SKU')) return 'SKU_';
+  if (n0.startsWith('详情图')) return '详情图_';
+  return n0;
 }
 
 // 两次操作之间的随机停顿。固定节奏本身就是风控特征。
@@ -454,6 +523,9 @@ module.exports = {
   shotsEnabled,
   isAllImagesFolder,
   switchToAllImages,
+  pickerShowsOurFiles,
+  searchPickerByName,
+  searchKeywordFor,
   pace,
   connect,
   publishUrl,

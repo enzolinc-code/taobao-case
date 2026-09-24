@@ -26,6 +26,8 @@ const {
   waitUntil,
   waitForPickerContent,
   switchToAllImages,
+  searchPickerByName,
+  searchKeywordFor,
   screenshot,
   ensureDir,
   getArg,
@@ -119,6 +121,10 @@ async function pickImagesInMaterialCenter(page, baseNames) {
 
   const sw = await switchToAllImages(page);
   console.log('   切到「全部图片」目录: ' + (sw.ok ? (sw.alreadyThere ? '本来就在（0 秒）' : sw.ms + ' ms') : '失败'));
+  // 列表被别的东西顶满时（例如平台生成的 `商品ID-搜推_NN` 图），按名称先过滤
+  const skw = searchKeywordFor(baseNames);
+  const ssr = await searchPickerByName(page, skw);
+  console.log('   按名称过滤: ' + (ssr.ok ? skw + '（' + ssr.ms + ' ms）' : '失败 ' + (ssr.reason || '')));
   frame = page.frames().find((f) => f.url().includes(SELECTOR_IFRAME)) || frame;
 
   const picked = [];
