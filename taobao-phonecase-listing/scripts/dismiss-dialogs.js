@@ -30,7 +30,12 @@ async function main() {
   let closed = 0;
   for (let round = 0; round < 4; round++) {
     const info = await page.evaluate(
-      (texts, keepPatterns, keepTexts) => {
+      // 【2026-09-25 修】Playwright 的 evaluate 只接受**一个**参数，
+      // 原来写成 (texts, keepPatterns, keepTexts) 传三个，会直接抛
+      // "Too many arguments. If you need to pass more than 1 argument to the function wrap them in an object."
+      // 结果是这一步永远失败 → 流水线的安全闸判定"有步骤失败" → 整条链接卡在提交前（397 就是这样）。
+      // 改成传一个对象后解构，语义不变。
+      ({ texts, keepPatterns, keepTexts }) => {
         const textOf = (el) => (el && el.innerText ? el.innerText : '').replace(/\s+/g, ' ').trim();
         const patterns = (keepPatterns || []).map((src) => new RegExp(src));
         const opened = Array.from(document.querySelectorAll('.next-overlay-wrapper.opened'))
@@ -84,9 +89,11 @@ async function main() {
         }
         return { opened: opened.length, count, clicked };
       },
-      CONFIRM_TEXTS,
-      KEEP_TEXT_PATTERNS.map((re) => re.source),
-      KEEP_TEXTS
+      {
+        texts: CONFIRM_TEXTS,
+        keepPatterns: KEEP_TEXT_PATTERNS.map((re) => re.source),
+        keepTexts: KEEP_TEXTS,
+      }
     );
     if (expect) console.log('（本次期待包含「' + expect + '」）');
     console.log('第 ' + (round + 1) + ' 轮：打开 ' + info.opened + ' 个，点了 ' + info.count + ' 个 ' + JSON.stringify(info.clicked));
