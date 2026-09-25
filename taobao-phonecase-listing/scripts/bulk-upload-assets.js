@@ -351,12 +351,38 @@ async function main() {
   // 落一份"本次上传清单"，给后面的选图步骤做逐张核对用
   const uploadedFile = path.join(outRoot, 'last-upload.json');
   fs.writeFileSync(path.join(outRoot, 'last-upload-raw.json'), JSON.stringify(rawBodies, null, 2), 'utf8');
+  // 【2026-09-26 新增，可选】--merge-manifest：把本次成功上传的文件**合并进已有清单**。
+  //
+  // 背景：限流紧的时候，分批投递（--chunk）能让前面几批进去、后面的被拒
+  // （实测 6 张一批：前 12 张成功、第 3 批被拒）。一轮传不完 21 张，
+  // 于是"下一轮再传"就成了唯一出路 —— 但原清单是**整份覆盖**的，第二轮只记自己的那几张，
+  // 前面已传进去的就被丢了，永远凑不齐。
+  // 加了这个开关后：每轮把成功的部分**并进**清单（按文件名去重、以最新一次为准），
+  // 反复几轮就能凑齐 21 张；凑齐后再跑 `pipeline-new-listing.js`（**不加 --upload**），
+  // 它会用这份合并清单直接挑图，不会重复上传。
+  // 默认关闭 = 行为与以前完全一致。
+  let manifestFiles = uploaded;
+  if (process.argv.includes('--merge-manifest')) {
+    try {
+      if (fs.existsSync(uploadedFile)) {
+        const prev = JSON.parse(fs.readFileSync(uploadedFile, 'utf8'));
+        const byName = new Map();
+        for (const f of (prev.files || [])) byName.set(f.file, f);
+        for (const f of uploaded) byName.set(f.file, f); // 本次的覆盖旧的
+        manifestFiles = [...byName.values()];
+        console.log('   合并清单：本次 ' + uploaded.length + ' 个，累计 ' + manifestFiles.length + ' 个');
+      }
+    } catch (e) {
+      console.log('   ⚠️ 合并清单失败（按原样覆盖）: ' + e.message);
+      manifestFiles = uploaded;
+    }
+  }
   fs.writeFileSync(
     uploadedFile,
-    JSON.stringify({ dir: root, at: new Date().toISOString(), count: uploaded.length, files: uploaded }, null, 2),
+    JSON.stringify({ dir: root, at: new Date().toISOString(), count: manifestFiles.length, files: manifestFiles }, null, 2),
     'utf8'
   );
-  console.log('   本次上传清单: ' + uploaded.length + ' 个文件 → ' + uploadedFile);
+  console.log('   本次上传清单: ' + manifestFiles.length + ' 个文件 → ' + uploadedFile);
 
   if (needCount >= files.length && accepted.length < files.length) {
     console.log('⚠️ 没有收齐回执（' + accepted.length + '/' + files.length + '），继续按老逻辑再等一会儿');
