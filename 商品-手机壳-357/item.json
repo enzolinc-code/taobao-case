@@ -1,0 +1,31 @@
+{
+  "catId": "150704",
+  "titleSuffix": "适用苹果18pro手机壳菲林二合一nova16华为p90mate80小米17opporeno15vivo荣耀iPhone套",
+  "titleGuardMode": "warn",
+  "assetsDir": "../商品图片/M0519青涩波点渐变",
+  "price": 19.8,
+  "stock": 200,
+  "outerId": "PC-357",
+  "outerIdPattern": "{prefix}-{适用手机型号.code}-{颜色分类.code}",
+  "attributes": {
+    "工艺技术": "热转印",
+    "款式": "保护壳",
+    "定制服务": "不支持定制服务",
+    "适用手机机型": "Apple/苹果"
+  },
+  "axes": {
+    "颜色分类": {
+      "fromRegistry": "机型清单.json",
+      "axis": "颜色分类"
+    },
+    "适用手机型号": {
+      "fromRegistry": "机型清单.json",
+      "axis": "适用手机型号"
+    }
+  },
+  "logistics": {
+    "deliveryTime": "48小时内发货",
+    "publishTiming": "放入仓库"
+  },
+  "notes": "M0519青涩波点渐变"
+}
