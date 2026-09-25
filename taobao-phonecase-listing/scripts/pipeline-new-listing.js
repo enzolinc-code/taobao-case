@@ -158,6 +158,8 @@ async function main() {
   );
   steps.push(runStep('4. 换标题', 'set-listing-title.js', ['--item', itemPath]));
   steps.push(runStep('5. SKU 颜色图（一次多选）', 'fill-sku-color-images.js', ['--dir', dir]));
+  // 这一步结束时页面常留一个要点「确定」的弹窗，不关掉会挡住下一步（详情图点不到）。
+  steps.push(runStep('5b. 关闭遗留弹窗', 'dismiss-dialogs.js', []));
   steps.push(runStep('6. 详情图（一次多选）', 'fill-detail-images.js', ['--dir', dir]));
   // 白底图：默认用目录里的 SKU_1（800x800 正视图纯白底），结果可控。
   // 页面的「从主图生成」实测挑的是第 5 张斜拍图、且无法指定源图，所以不采用；要试加 --generate。
