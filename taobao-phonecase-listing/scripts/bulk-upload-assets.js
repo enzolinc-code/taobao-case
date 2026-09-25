@@ -362,21 +362,38 @@ async function main() {
   // 它会用这份合并清单直接挑图，不会重复上传。
   // 默认关闭 = 行为与以前完全一致。
   let manifestFiles = uploaded;
+  // 【2026-09-26 新增】**按素材目录分开存**一份清单。
+  //
+  // 起因是我自己踩的坑：`--merge-manifest` 原来以 `last-upload.json` 作为合并基底，
+  // 而"单张探针"也会写这个文件——探针用的是**另一个目录**，于是把上一条商品辛苦累积的
+  // 12 条记录整份覆盖掉了（图还在素材库，但"文件名→图片编号"的对照没了，只能重传）。
+  // 现在累积以 `manifests/<素材目录名>.json` 为准，探针/别的商品都动不到它；
+  // 同时仍然写一份 `last-upload.json` 给后面的"按编号挑图"用（保持兼容）。
+  const perDirManifest = path.join(outRoot, 'manifests', path.basename(root) + '.json');
+  ensureDir(path.dirname(perDirManifest));
   if (process.argv.includes('--merge-manifest')) {
     try {
-      if (fs.existsSync(uploadedFile)) {
-        const prev = JSON.parse(fs.readFileSync(uploadedFile, 'utf8'));
+      if (fs.existsSync(perDirManifest)) {
+        const prev = JSON.parse(fs.readFileSync(perDirManifest, 'utf8'));
         const byName = new Map();
         for (const f of (prev.files || [])) byName.set(f.file, f);
         for (const f of uploaded) byName.set(f.file, f); // 本次的覆盖旧的
         manifestFiles = [...byName.values()];
-        console.log('   合并清单：本次 ' + uploaded.length + ' 个，累计 ' + manifestFiles.length + ' 个');
+        console.log('   合并清单（' + path.basename(root) + '）：本次 ' + uploaded.length +
+          ' 个，累计 ' + manifestFiles.length + ' 个');
+      } else {
+        console.log('   合并清单（' + path.basename(root) + '）：首次累积 ' + uploaded.length + ' 个');
       }
     } catch (e) {
       console.log('   ⚠️ 合并清单失败（按原样覆盖）: ' + e.message);
       manifestFiles = uploaded;
     }
   }
+  fs.writeFileSync(
+    perDirManifest,
+    JSON.stringify({ dir: root, at: new Date().toISOString(), count: manifestFiles.length, files: manifestFiles }, null, 2),
+    'utf8'
+  );
   fs.writeFileSync(
     uploadedFile,
     JSON.stringify({ dir: root, at: new Date().toISOString(), count: manifestFiles.length, files: manifestFiles }, null, 2),
