@@ -252,7 +252,48 @@ async function main() {
   page.on('response', onResponse);
 
   const t0 = Date.now();
-  await chooser.setFiles(files);
+  // 【2026-09-26 新增，可选】--chunk N：把整批拆成每批 N 张、批间停几秒再投。
+  //
+  // 为什么要这个开关：9/26 凌晨连续出现"单张探针通过、紧接着 21 张整批 3.9 秒被全拒"，
+  // 而同一账号在窗口宽松时整批 21 张又完全正常。推测平台按**短时间窗口内的上传请求数**计数：
+  // 1 个请求在额度内，21 个并发请求就超了。若成立，拆小批能在紧额度下也推进（总请求数不变、瞬时并发降低）。
+  // **默认 0 = 关闭，行为与以前完全一致**：只有显式加 --chunk 才走分批。
+  const chunkSize = Number(getArg('chunk') || 0);
+  const useChunks = chunkSize > 0 && chunkSize < files.length;
+  if (useChunks) {
+    console.log('分批投递模式：每批 ' + chunkSize + ' 张，批间停 4 秒（共 ' + files.length + ' 张）');
+    const input = frame.locator('input[type=file]').first();
+    for (let i = 0; i < files.length; i += chunkSize) {
+      const part = files.slice(i, i + chunkSize);
+      const before = accepted.length + failed.length + rejected.length;
+      if (i === 0) {
+        await chooser.setFiles(part);
+      } else {
+        await input.setInputFiles(part).catch(async () => {
+          // 少数版本里 input 会被重建，退回到"再点一次本地上传"拿新的 chooser
+          const ch = page.waitForEvent('filechooser', { timeout: 8000 });
+          await frame.locator('#sucai-tu-upload, button:has-text("本地上传")').first().click().catch(() => {});
+          const c2 = await ch.catch(() => null);
+          if (c2) await c2.setFiles(part);
+        });
+      }
+      console.log('   第 ' + (Math.floor(i / chunkSize) + 1) + ' 批投递 ' + part.length + ' 张…');
+      // 等这一批的回执（或一被拒就停）
+      const cap = Date.now() + Math.max(30000, part.length * 6000);
+      while (Date.now() < cap) {
+        if (rejected.length) break;
+        if (accepted.length + failed.length + rejected.length >= before + part.length) break;
+        await sleep(400);
+      }
+      if (rejected.length) {
+        console.log('   ⛔ 这一批被拒，停止投递（后续批次不再发）');
+        break;
+      }
+      if (i + chunkSize < files.length) await sleep(4000);
+    }
+  } else {
+    await chooser.setFiles(files);
+  }
   console.log('已投递 ' + files.length + ' 个文件，按接口回执判断完成…');
 
   // 要等多少个回执才继续？默认等全部（files.length）。
