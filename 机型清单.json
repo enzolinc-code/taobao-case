@@ -52,20 +52,8 @@
         "enabled": true
       },
       {
-        "name": "iPhone Air",
-        "code": "IP-AIR",
-        "group": "苹果",
-        "enabled": true
-      },
-      {
-        "name": "iPhone 16",
-        "code": "IP-16",
-        "group": "苹果",
-        "enabled": true
-      },
-      {
-        "name": "iPhone 16 plus",
-        "code": "IP-16PL",
+        "name": "iPhone 16 Pro Max",
+        "code": "IP-16PM",
         "group": "苹果",
         "enabled": true
       },
@@ -76,8 +64,14 @@
         "enabled": true
       },
       {
-        "name": "iPhone 16 Pro Max",
-        "code": "IP-16PM",
+        "name": "iPhone 16 plus",
+        "code": "IP-16PL",
+        "group": "苹果",
+        "enabled": true
+      },
+      {
+        "name": "iPhone 16",
+        "code": "IP-16",
         "group": "苹果",
         "enabled": true
       },
@@ -106,14 +100,14 @@
         "enabled": true
       },
       {
-        "name": "iPhone 14",
-        "code": "IP-14",
+        "name": "iPhone Air",
+        "code": "IP-AIR",
         "group": "苹果",
         "enabled": true
       },
       {
-        "name": "iPhone 14 Plus",
-        "code": "IP-14PL",
+        "name": "iPhone 14",
+        "code": "IP-14",
         "group": "苹果",
         "enabled": true
       },
@@ -126,6 +120,12 @@
       {
         "name": "iPhone 14 Pro Max",
         "code": "IP-14PM",
+        "group": "苹果",
+        "enabled": true
+      },
+      {
+        "name": "iPhone 14 Plus",
+        "code": "IP-14PL",
         "group": "苹果",
         "enabled": true
       },
@@ -190,12 +190,6 @@
         "enabled": true
       },
       {
-        "name": "iPhone XS",
-        "code": "IP-XS",
-        "group": "苹果",
-        "enabled": true
-      },
-      {
         "name": "iPhone XR",
         "code": "IP-XR",
         "group": "苹果",
@@ -205,42 +199,6 @@
         "name": "iPhone X",
         "code": "IP-X",
         "group": "苹果",
-        "enabled": true
-      },
-      {
-        "name": "华为Mate80",
-        "code": "HW-M80",
-        "group": "华为",
-        "enabled": true
-      },
-      {
-        "name": "华为Mate80 Pro",
-        "code": "HW-M80P",
-        "group": "华为",
-        "enabled": true
-      },
-      {
-        "name": "华为 Mate80 Pro Max",
-        "code": "HW-M80PM",
-        "group": "华为",
-        "enabled": true
-      },
-      {
-        "name": "华为Mate 70",
-        "code": "HW-M70",
-        "group": "华为",
-        "enabled": true
-      },
-      {
-        "name": "华为Mate 70Pro",
-        "code": "HW-M70P",
-        "group": "华为",
-        "enabled": true
-      },
-      {
-        "name": "华为 Mate 70 Pro+",
-        "code": "HW-M70P+",
-        "group": "华为",
         "enabled": true
       },
       {
@@ -262,38 +220,20 @@
         "enabled": true
       },
       {
-        "name": "华为 Mate 50",
-        "code": "HW-M50",
+        "name": "华为 Mate 70 Pro+",
+        "code": "HW-M70P+",
         "group": "华为",
         "enabled": true
       },
       {
-        "name": "华为 Mate 50 Pro",
-        "code": "HW-M50P",
+        "name": "华为 Mate80 Pro Max",
+        "code": "HW-M80PM",
         "group": "华为",
         "enabled": true
       },
       {
-        "name": "华为 Mate 40",
-        "code": "HW-M40",
-        "group": "华为",
-        "enabled": true
-      },
-      {
-        "name": "华为 Mate 40 Pro",
-        "code": "HW-M40P",
-        "group": "华为",
-        "enabled": true
-      },
-      {
-        "name": "华为 Mate 30",
-        "code": "HW-M30",
-        "group": "华为",
-        "enabled": true
-      },
-      {
-        "name": "华为 Mate 30 Pro",
-        "code": "HW-M30P",
+        "name": "华为 Nova14 Ultra",
+        "code": "HW-N14U",
         "group": "华为",
         "enabled": true
       },
@@ -306,6 +246,60 @@
       {
         "name": "华为 Nova16 Pro",
         "code": "HW-N16P",
+        "group": "华为",
+        "enabled": true
+      },
+      {
+        "name": "华为 Pura 80",
+        "code": "HW-P80",
+        "group": "华为",
+        "enabled": true
+      },
+      {
+        "name": "华为 Pura90 Pro",
+        "code": "HW-P90P",
+        "group": "华为",
+        "enabled": true
+      },
+      {
+        "name": "华为 Pura90 Pro Max",
+        "code": "HW-P90PM",
+        "group": "华为",
+        "enabled": true
+      },
+      {
+        "name": "华为 nova 11",
+        "code": "HW-N11",
+        "group": "华为",
+        "enabled": true
+      },
+      {
+        "name": "华为 nova 11 Pro",
+        "code": "HW-N11P",
+        "group": "华为",
+        "enabled": true
+      },
+      {
+        "name": "华为 nova 11 Ultra",
+        "code": "HW-N11U",
+        "group": "华为",
+        "enabled": true
+      },
+      {
+        "name": "华为 nova 12",
+        "code": "HW-N12",
+        "group": "华为",
+        "enabled": true
+      },
+      {
+        "name": "华为 nova 12 Ultra",
+        "code": "HW-N12U",
+        "group": "华为",
+        "enabled": true
+      },
+      {
+        "name": "华为 nova 12 活力版",
+        "code": "HW-N12V",
         "group": "华为",
         "enabled": true
       },
@@ -328,20 +322,26 @@
         "enabled": true
       },
       {
-        "name": "华为Nova14",
-        "code": "HW-N14",
+        "name": "华为Mate 70",
+        "code": "HW-M70",
         "group": "华为",
         "enabled": true
       },
       {
-        "name": "华为Nova14Pro",
-        "code": "HW-N14P",
+        "name": "华为Mate 70Pro",
+        "code": "HW-M70P",
         "group": "华为",
         "enabled": true
       },
       {
-        "name": "华为 Nova14 Ultra",
-        "code": "HW-N14U",
+        "name": "华为Mate80",
+        "code": "HW-M80",
+        "group": "华为",
+        "enabled": true
+      },
+      {
+        "name": "华为Mate80 Pro",
+        "code": "HW-M80P",
         "group": "华为",
         "enabled": true
       },
@@ -358,56 +358,32 @@
         "enabled": true
       },
       {
-        "name": "华为 nova 12",
-        "code": "HW-N12",
+        "name": "华为Nova14",
+        "code": "HW-N14",
         "group": "华为",
         "enabled": true
       },
       {
-        "name": "华为 nova 12 Ultra",
-        "code": "HW-N12U",
+        "name": "华为Nova14Pro",
+        "code": "HW-N14P",
         "group": "华为",
         "enabled": true
       },
       {
-        "name": "华为 nova 12 Pro",
-        "code": "HW-N12P",
+        "name": "iPhone XS",
+        "code": "IP-XS",
+        "group": "苹果",
+        "enabled": true
+      },
+      {
+        "name": "华为 Mate 50",
+        "code": "HW-M50",
         "group": "华为",
         "enabled": true
       },
       {
-        "name": "华为 nova 12 活力版",
-        "code": "HW-N12V",
-        "group": "华为",
-        "enabled": true
-      },
-      {
-        "name": "华为 nova 11",
-        "code": "HW-N11",
-        "group": "华为",
-        "enabled": true
-      },
-      {
-        "name": "华为 nova 11 Ultra",
-        "code": "HW-N11U",
-        "group": "华为",
-        "enabled": true
-      },
-      {
-        "name": "华为 nova 11 Pro",
-        "code": "HW-N11P",
-        "group": "华为",
-        "enabled": true
-      },
-      {
-        "name": "华为 nova 10",
-        "code": "HW-N10",
-        "group": "华为",
-        "enabled": true
-      },
-      {
-        "name": "华为 nova 10 Pro",
-        "code": "HW-N10P",
+        "name": "华为 Mate 50 Pro",
+        "code": "HW-M50P",
         "group": "华为",
         "enabled": true
       },
@@ -424,32 +400,410 @@
         "enabled": true
       },
       {
+        "name": "华为 Mate 40",
+        "code": "HW-M40",
+        "group": "华为",
+        "enabled": true
+      },
+      {
+        "name": "华为 Mate 40 Pro",
+        "code": "HW-M40P",
+        "group": "华为",
+        "enabled": true
+      },
+      {
+        "name": "华为 Mate 30 Pro",
+        "code": "HW-M30P",
+        "group": "华为",
+        "enabled": true
+      },
+      {
+        "name": "华为 Mate 30",
+        "code": "HW-M30",
+        "group": "华为",
+        "enabled": true
+      },
+      {
+        "name": "华为 nova 10",
+        "code": "HW-N10",
+        "group": "华为",
+        "enabled": true
+      },
+      {
+        "name": "华为 nova 10 Pro",
+        "code": "HW-N10P",
+        "group": "华为",
+        "enabled": true
+      },
+      {
         "name": "华为 nova 9 SE",
         "code": "HW-N9SE",
         "group": "华为",
         "enabled": true
       },
       {
-        "name": "华为 Pura90 Pro",
-        "code": "HW-P90P",
+        "name": "华为 nova 12 Pro",
+        "code": "HW-N12P",
         "group": "华为",
         "enabled": true
       },
       {
-        "name": "华为 Pura90 Pro Max",
-        "code": "HW-P90PM",
-        "group": "华为",
+        "name": "小米 14",
+        "code": "MI-14",
+        "group": "小米",
         "enabled": true
       },
       {
-        "name": "华为 Pura 80",
-        "code": "HW-P80",
-        "group": "华为",
+        "name": "小米 14 Pro",
+        "code": "MI-14PRO",
+        "group": "小米",
+        "enabled": true
+      },
+      {
+        "name": "小米 17",
+        "code": "MI-17",
+        "group": "小米",
+        "enabled": true
+      },
+      {
+        "name": "小米 17 Pro",
+        "code": "MI-17PRO",
+        "group": "小米",
+        "enabled": true
+      },
+      {
+        "name": "小米 17 Pro Max",
+        "code": "MI-17PROMAX",
+        "group": "小米",
+        "enabled": true
+      },
+      {
+        "name": "小米 18",
+        "code": "MI-18",
+        "group": "小米",
+        "enabled": true
+      },
+      {
+        "name": "小米 18 Pro",
+        "code": "MI-18PRO",
+        "group": "小米",
+        "enabled": true
+      },
+      {
+        "name": "小米 18 Pro Max",
+        "code": "MI-18PROMAX",
+        "group": "小米",
+        "enabled": true
+      },
+      {
+        "name": "小米15",
+        "code": "MI-15",
+        "group": "小米",
+        "enabled": true
+      },
+      {
+        "name": "小米15 Pro",
+        "code": "MI-15PRO",
+        "group": "小米",
+        "enabled": true
+      },
+      {
+        "name": "红米 K80",
+        "code": "RM-K80",
+        "group": "红米",
+        "enabled": true
+      },
+      {
+        "name": "红米 K80 Pro",
+        "code": "RM-K80PRO",
+        "group": "红米",
+        "enabled": true
+      },
+      {
+        "name": "荣耀500 Pro",
+        "code": "HR-500PRO",
+        "group": "荣耀",
+        "enabled": true
+      },
+      {
+        "name": "荣耀400",
+        "code": "HR-400",
+        "group": "荣耀",
+        "enabled": true
+      },
+      {
+        "name": "荣耀400 Pro",
+        "code": "HR-400PRO",
+        "group": "荣耀",
+        "enabled": true
+      },
+      {
+        "name": "荣耀300 Pro",
+        "code": "HR-300PRO",
+        "group": "荣耀",
+        "enabled": true
+      },
+      {
+        "name": "荣耀300",
+        "code": "HR-300",
+        "group": "荣耀",
+        "enabled": true
+      },
+      {
+        "name": "荣耀200",
+        "code": "HR-200",
+        "group": "荣耀",
+        "enabled": true
+      },
+      {
+        "name": "荣耀200 Pro",
+        "code": "HR-200PRO",
+        "group": "荣耀",
+        "enabled": true
+      },
+      {
+        "name": "荣耀100",
+        "code": "HR-100",
+        "group": "荣耀",
+        "enabled": true
+      },
+      {
+        "name": "荣耀100 Pro",
+        "code": "HR-100PRO",
+        "group": "荣耀",
+        "enabled": true
+      },
+      {
+        "name": "荣耀90",
+        "code": "HR-90",
+        "group": "荣耀",
+        "enabled": true
+      },
+      {
+        "name": "荣耀90 Pro",
+        "code": "HR-90PRO",
+        "group": "荣耀",
+        "enabled": true
+      },
+      {
+        "name": "荣耀90GT",
+        "code": "HR-90GT",
+        "group": "荣耀",
+        "enabled": true
+      },
+      {
+        "name": "荣耀80",
+        "code": "HR-80",
+        "group": "荣耀",
+        "enabled": true
+      },
+      {
+        "name": "荣耀80 Pro",
+        "code": "HR-80PRO",
+        "group": "荣耀",
+        "enabled": true
+      },
+      {
+        "name": "荣耀70",
+        "code": "HR-70",
+        "group": "荣耀",
+        "enabled": true
+      },
+      {
+        "name": "荣耀70 Pro",
+        "code": "HR-70PRO",
+        "group": "荣耀",
+        "enabled": true
+      },
+      {
+        "name": "荣耀60",
+        "code": "HR-60",
+        "group": "荣耀",
+        "enabled": true
+      },
+      {
+        "name": "荣耀60 Pro",
+        "code": "HR-60PRO",
+        "group": "荣耀",
+        "enabled": true
+      },
+      {
+        "name": "荣耀Magic8",
+        "code": "HR-MAGIC8",
+        "group": "荣耀",
+        "enabled": true
+      },
+      {
+        "name": "荣耀Magic8 Pro",
+        "code": "HR-MAGIC8PRO",
+        "group": "荣耀",
+        "enabled": true
+      },
+      {
+        "name": "vivo X300",
+        "code": "VO-X300",
+        "group": "vivo",
+        "enabled": true
+      },
+      {
+        "name": "vivo X300s",
+        "code": "VO-X300S",
+        "group": "vivo",
+        "enabled": true
+      },
+      {
+        "name": "vivo X300 Pro",
+        "code": "VO-X300PRO",
+        "group": "vivo",
+        "enabled": true
+      },
+      {
+        "name": "vivo X300 Ultra",
+        "code": "VO-X300ULTRA",
+        "group": "vivo",
+        "enabled": true
+      },
+      {
+        "name": "vivo S20",
+        "code": "VO-S20",
+        "group": "vivo",
+        "enabled": true
+      },
+      {
+        "name": "vivo S20 Pro",
+        "code": "VO-S20PRO",
+        "group": "vivo",
+        "enabled": true
+      },
+      {
+        "name": "vivo S19",
+        "code": "VO-S19",
+        "group": "vivo",
+        "enabled": true
+      },
+      {
+        "name": "vivo S19 Pro",
+        "code": "VO-S19PRO",
+        "group": "vivo",
+        "enabled": true
+      },
+      {
+        "name": "vivo S18",
+        "code": "VO-S18",
+        "group": "vivo",
+        "enabled": true
+      },
+      {
+        "name": "vivo S18 Pro",
+        "code": "VO-S18PRO",
+        "group": "vivo",
+        "enabled": true
+      },
+      {
+        "name": "vivo S17",
+        "code": "VO-S17",
+        "group": "vivo",
+        "enabled": true
+      },
+      {
+        "name": "vivo S17 Pro",
+        "code": "VO-S17PRO",
+        "group": "vivo",
+        "enabled": true
+      },
+      {
+        "name": "OPPO Reno16",
+        "code": "OP-RENO16",
+        "group": "OPPO",
+        "enabled": true
+      },
+      {
+        "name": "OPPO Reno16 Pro",
+        "code": "OP-RENO16PRO",
+        "group": "OPPO",
+        "enabled": true
+      },
+      {
+        "name": "OPPO Reno15",
+        "code": "OP-RENO15",
+        "group": "OPPO",
+        "enabled": true
+      },
+      {
+        "name": "OPPO Reno14",
+        "code": "OP-RENO14",
+        "group": "OPPO",
+        "enabled": true
+      },
+      {
+        "name": "OPPO Reno14 Pro",
+        "code": "OP-RENO14PRO",
+        "group": "OPPO",
+        "enabled": true
+      },
+      {
+        "name": "oppo Find X9Pro",
+        "code": "OP-FINDX9PRO",
+        "group": "OPPO",
+        "enabled": true
+      },
+      {
+        "name": "一加 10 Pro",
+        "code": "O1-10PRO",
+        "group": "一加",
+        "enabled": true
+      },
+      {
+        "name": "一加 11",
+        "code": "O1-11",
+        "group": "一加",
+        "enabled": true
+      },
+      {
+        "name": "一加 12",
+        "code": "O1-12",
+        "group": "一加",
+        "enabled": true
+      },
+      {
+        "name": "一加 13",
+        "code": "O1-13",
+        "group": "一加",
+        "enabled": true
+      },
+      {
+        "name": "一加 16",
+        "code": "O1-16",
+        "group": "一加",
+        "enabled": true
+      },
+      {
+        "name": "一加 Ace 2",
+        "code": "O1-ACE2",
+        "group": "一加",
+        "enabled": true
+      },
+      {
+        "name": "一加 Ace 2 Pro",
+        "code": "O1-ACE2PRO",
+        "group": "一加",
+        "enabled": true
+      },
+      {
+        "name": "一加 Ace 3V",
+        "code": "O1-ACE3V",
+        "group": "一加",
+        "enabled": true
+      },
+      {
+        "name": "一加 Ace 3 Pro",
+        "code": "O1-ACE3PRO",
+        "group": "一加",
         "enabled": true
       }
     ]
   },
   "_用法": "全店共用一份机型表。放在商品文件夹的上一级，item.json 用 axes 引用它。",
-  "_来源": "由 structure.json 生成（来自商品自身 SKU 模板）。",
-  "updatedAt": "2026-09-20"
+  "_来源": "由 structure.json 生成（来自商品自身 SKU 模板）；2026-09-27 按 9/25 之后的新标准扩到 130 个机型（苹果31+华为40+小米10+红米2+荣耀20+vivo12+OPPO6+一加9）。",
+  "updatedAt": "2026-09-27"
 }
