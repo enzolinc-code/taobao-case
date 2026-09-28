@@ -117,6 +117,13 @@ function main() {
     console.log('');
     console.log('████ ' + no + '  ' + design + '（已累积 ' + manifestCount(design) + '/21）████');
 
+    // ── 0. 确保桌面上有一张发布页（上传步骤依赖它；提交成功后会被 submit-listing 关掉）──
+    // 【2026-09-28 加】以前靠人工在批量前开一张，结果发布时流程又开一张 →
+    // 桌面上同时两张发布页（用户反馈"发布一个宝贝打开 2 次发布页"）。
+    // 现在每条开跑前自动确认，配合 pipeline 的"复用已有发布页"，全程只留一张。
+    const ensure = run('ensure-publish-page.js', ['150704']);
+    console.log('  ' + lastLines(ensure.out, 1));
+
     // ── 1. 累积上传（最多 3 轮：首次 + 2 次补）──────────────────
     let count = manifestCount(design);
     for (let attempt = 0; attempt < 3 && count < 21; attempt++) {

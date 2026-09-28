@@ -45,14 +45,25 @@ async function openCopyPage(sourceId) {
     encodeURIComponent(sourceId) +
     '&fromAIPublish=true';
   const { context } = await connect();
-  // 先看看桌面上有没有上一轮留下的发布页（旧草稿）。
-  const leftovers = context.pages().filter((p) => p.url().includes('publish.htm'));
-  if (leftovers.length) {
-    console.log('⚠️ 桌面上已有 ' + leftovers.length + ' 张旧发布页（上一轮的草稿）。');
-    console.log('   下面每一步都会认「最新打开的那张」= 本步骤刚开的这张，不会动旧草稿；');
-    console.log('   要清掉旧草稿可先跑 _listing-work/restart-pipeline.js。');
+
+  // 【2026-09-28 改】以前这里一律新开标签页，导致"上传步骤用的那张发布页"和"这张复制页"
+  // 同时挂在桌面上——看起来就像"发布一个宝贝打开 2 次发布页"。
+  // 现在优先**复用已有的发布页**（把空白/上一轮的发布页直接导航到 copyItem 地址），
+  // 全程只留一张发布页；只有桌面上确实没有发布页时才新开。
+  const publishPages = context.pages().filter((p) => p.url().includes('publish.htm'));
+  const reusable = publishPages.filter((p) => !p.url().includes('copyItem=true')).pop();
+  let page;
+  if (reusable) {
+    console.log('复用已打开的发布页（不新开标签）：' + reusable.url().slice(0, 80));
+    page = reusable;
+  } else {
+    const leftovers = publishPages;
+    if (leftovers.length) {
+      console.log('⚠️ 桌面上已有 ' + leftovers.length + ' 张旧发布页（上一轮的草稿）。');
+      console.log('   要清掉旧草稿可先跑 _listing-work/restart-pipeline.js。');
+    }
+    page = await context.newPage();
   }
-  const page = await context.newPage();
   // 兜底指定：万一"最新"判断不可靠，子步骤会按这个 URL 片段挑页（认最后一张匹配的，也就是刚开的这张）。
   process.env.TAOBAO_TARGET_PAGE_HINT = 'copyItem=true&itemId=' + encodeURIComponent(sourceId);
   await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 60000 });
