@@ -1,0 +1,71 @@
+{
+  "_说明": "店铺级配置。换店铺 / 换机器只改这个文件（加上 config/models.json 和 config/image-spec.json）。",
+  "_字段来源": "全部取自现有 629 条商品配置的实测值，未做任何改动。",
+
+  "catId": "150704",
+  "_catId说明": "3C数码配件 >> 手机配件 >> 手机保护套/壳",
+
+  "copyFromItemId": "1083698755183",
+  "_copyFromItemId说明": "【模板商品ID】所有新链接都通过它的「发布相似宝贝」复制生成；它的 SKU 模板决定了新链接的机型范围。",
+
+  "titleSuffix": "适用苹果18pro手机壳菲林二合一nova16华为p90mate80小米17opporeno15vivo荣耀iPhone套",
+  "_titleSuffix说明": "【标题后缀】最终标题 = 素材目录名 + 这个后缀，脚本不做任何改写。",
+  "titleRule": {
+    "maxWeight": 100,
+    "designNameMaxWeight": 20,
+    "_说明": "平台上限 100 个字符，且汉字按 2 个字符计；这个后缀本身占 80 权重，所以素材目录名（=标题前缀）最多 20 权重，实操是「目录名里的汉字 ≤ 7 个」。",
+    "guardMode": "warn"
+  },
+
+  "price": 19.8,
+  "priceOverrides": [
+    {
+      "price": 22.8,
+      "when": {
+        "modelRegex": "^iPhone",
+        "color": "大孔二合一（磁吸）"
+      },
+      "_说明": "实测：iPhone 的磁吸款比其它贵 3 元，其余一律 19.8。"
+    }
+  ],
+  "stock": 200,
+  "_stock说明": "每个 SKU 的默认库存；磁吸款历史上部分机型是 0（缺货），需要按实际备货调整。",
+
+  "outerId": "PC",
+  "outerIdPattern": "{prefix}-{适用手机型号.code}-{颜色分类.code}",
+  "_outerId说明": "商家编码规则；目前页面上的商家编码列实际为空，暂不影响提交。",
+
+  "attributes": {
+    "工艺技术": "热转印",
+    "款式": "保护壳",
+    "定制服务": "不支持定制服务",
+    "适用手机机型": "Apple/苹果"
+  },
+
+  "axes": {
+    "颜色分类": { "fromRegistry": "config/models.json", "axis": "颜色分类" },
+    "适用手机型号": { "fromRegistry": "config/models.json", "axis": "适用手机型号" }
+  },
+
+  "logistics": {
+    "deliveryTime": "48小时内发货",
+    "publishTiming": "放入仓库"
+  },
+
+  "batch": {
+    "runMax": 6,
+    "_runMax说明": "一轮最多上几条。限流紧的时候单轮 6 条最稳（实测）。",
+    "chunk": 6,
+    "_chunk说明": "图片上传每批张数；整批 21 张在紧额度下必被拒，必须小批投递。",
+    "retryOnFail": 1,
+    "_retryOnFail说明": "偶发失败（SKU色图/详情图那几步没走完）时，清场整条重跑的次数上限。"
+  },
+
+  "paths": {
+    "assetsRoots": ["商品图片", "."],
+    "_assetsRoots说明": "素材目录可以放在这两个位置的任意一个；配置里的 assetsDir 会自动写成相对路径。",
+    "itemDirPrefix": "商品-手机壳-",
+    "ledger": "上架台账.md",
+    "workDir": "_listing-work"
+  }
+}

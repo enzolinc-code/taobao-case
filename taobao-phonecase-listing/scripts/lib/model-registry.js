@@ -15,10 +15,32 @@ const MAX_UPWARD_LEVELS = 5;
 function resolveRegistryPath(file, startDir) {
   if (path.isAbsolute(file)) return file;
   const base = startDir || process.cwd();
-  if (file.includes('/') || file.includes('\\')) return path.resolve(base, file);
+  if (file.includes('/') || file.includes('\\')) {
+    // 【2026-09-29】带路径的写法（如 "config/models.json"）：
+    // 先按「相对当前商品目录」解析，找不到就逐级往上找 —— 这样配置文件里
+    // 可以写仓库根相对的路径，商品目录在下面任意一层都能找到。
+    const direct = path.resolve(base, file);
+    if (fs.existsSync(direct)) return direct;
+    let up = base;
+    for (let level = 0; level < MAX_UPWARD_LEVELS; level++) {
+      const candidate = path.join(up, file);
+      if (fs.existsSync(candidate)) return candidate;
+      const parent = path.dirname(up);
+      if (parent === up) break;
+      up = parent;
+    }
+    return direct;
+  }
 
   let dir = base;
   for (let level = 0; level < MAX_UPWARD_LEVELS; level++) {
+    // 【2026-09-29】部署化改造：机型规格现在有规范位置 config/models.json。
+    // 当调用方按默认名（机型清单.json）找表时，优先用 config/models.json；
+    // 没有才回落到老位置，保证老配置继续能跑。
+    if (file === DEFAULT_REGISTRY_NAME) {
+      const preferred = path.join(dir, 'config', 'models.json');
+      if (fs.existsSync(preferred)) return preferred;
+    }
     const candidate = path.join(dir, file);
     if (fs.existsSync(candidate)) return candidate;
     const parent = path.dirname(dir);
