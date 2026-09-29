@@ -24,6 +24,12 @@ const HERE = __dirname;
 const ROOT = path.resolve(HERE, '..', '..');
 const OUT = path.join(ROOT, '_listing-work');
 
+// 同步等待（main() 是同步的，用不了 setTimeout）
+function sleepSync(ms) {
+  const sab = new SharedArrayBuffer(4);
+  Atomics.wait(new Int32Array(sab), 0, 0, ms);
+}
+
 function getArg(name, fallback) {
   const i = process.argv.indexOf('--' + name);
   return i > -1 && process.argv[i + 1] != null ? process.argv[i + 1] : fallback;
@@ -163,7 +169,14 @@ function main() {
       '--upload-1x1',
       '--out', OUT,
     ]);
-    const idm = publishedOk(design, startedAt - 5000);
+    // 【2026-09-29 修】提交报告是 submit-listing.js **写完后**父进程才可能读到，
+    // 之前立刻查会出现"明明发布成功、却报发布未成功"的竞态（545 就是这么误判的）。
+    // 这里改成最多等 24 秒，每 3 秒查一次。
+    let idm = publishedOk(design, startedAt - 5000);
+    for (let wait = 0; !idm && wait < 8; wait++) {
+      sleepSync(3000);
+      idm = publishedOk(design, startedAt - 5000);
+    }
     if (idm) {
       console.log('  ✅ 发布成功：' + idm[1]);
       done.push({ no, design, id: idm[1] });
