@@ -102,6 +102,29 @@ function publishedOk(design, sinceMs) {
   return null;
 }
 
+// 【2026-09-29 加】这条设计以前成功上架过没有（不限时间，只看本地提交报告）。
+// 用途：台账还没记账时，"待上架"会算错，脚本就会把已经上过的再发一遍 → 重复铺货。
+// 639 已经这样出过一次重复，所以这里默认拦住；确实要重发就加 --allow-republish。
+const ALLOW_REPUBLISH = process.argv.includes('--allow-republish');
+function alreadyPublished(design) {
+  if (!fs.existsSync(OUT)) return null;
+  for (const d of fs.readdirSync(OUT).filter((x) => x.startsWith('submit-'))) {
+    const f = path.join(OUT, d, 'submit-report.json');
+    if (!fs.existsSync(f)) continue;
+    try {
+      const j = JSON.parse(fs.readFileSync(f, 'utf8'));
+      const title = (j.snapshot && j.snapshot.title) || '';
+      if (title.startsWith(design) && j.result && j.result.kind === 'success') {
+        const m = j.result.text.match(/商品ID[：:]\s*(\d+)/);
+        return m ? m[1] : '（ID 未读出来）';
+      }
+    } catch (e) {
+      /* 忽略坏报告 */
+    }
+  }
+  return null;
+}
+
 function main() {
   const done = [];
   let stopped = null;
@@ -157,6 +180,13 @@ function main() {
     }
 
     // ── 2. 用现成清单发布（不加 --upload）──────────────────────
+    const dup = alreadyPublished(design);
+    if (dup && !ALLOW_REPUBLISH) {
+      console.log('  ⏭ 该设计已有成功提交记录（ID ' + dup + '），跳过以免重复上架');
+      console.log('    （确实要重发：在命令后加 --allow-republish）');
+      done.push({ no, design, id: dup, skipped: true });
+      continue;
+    }
     const startedAt = Date.now();
     const pub = run('pipeline-new-listing.js', [
       '--item', path.join('商品-手机壳-' + no, 'item.json'),
@@ -177,6 +207,17 @@ function main() {
       sleepSync(3000);
       idm = publishedOk(design, startedAt - 5000);
     }
+    // 【2026-09-29 加】兜底：本地没有提交报告 **不代表没发出去**。
+    // 639 就是这样：报"未成功"，其实平台已经上架，脚本重跑就多出一条重复链接。
+    // 所以这里去后台按标题搜一次，搜到就视为成功（并提醒报告缺失）。
+    if (!idm) {
+      const find = spawnSync(process.execPath, [path.join(HERE, 'find-item-by-title.js'), design], { encoding: 'utf8' });
+      const foundId = (find.stdout || '').trim().split(/\r?\n/)[0];
+      if (find.status === 0 && /^\d{9,}$/.test(foundId)) {
+        console.log('  ⚠️ 本地没有提交报告，但后台已存在该标题（ID ' + foundId + '）→ 视为发布成功，不再重跑');
+        idm = [null, foundId];
+      }
+    }
     if (idm) {
       console.log('  ✅ 发布成功：' + idm[1]);
       done.push({ no, design, id: idm[1] });
@@ -190,7 +231,7 @@ function main() {
 
   console.log('');
   console.log('══════ 本轮结果 ══════');
-  for (const d of done) console.log('  ✅ ' + d.no + ' ' + d.design + '  ' + d.id);
+  for (const d of done) console.log('  ' + (d.skipped ? '⏭ 已上架过' : '✅') + ' ' + d.no + ' ' + d.design + '  ' + d.id);
   console.log('  成功 ' + done.length + ' 条');
   if (stopped) console.log('  ⛔ 停止原因：' + stopped);
   const ids = done.map((d) => d.id);
